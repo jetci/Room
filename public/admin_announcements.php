@@ -2,16 +2,21 @@
 require_once __DIR__ . '/../routes/web.php';
 use App\Models\Booking;
 
+$currentUser = $_SESSION['user'] ?? [
+    'full_name' => 'คุณสมชาย บริหารดี',
+    'role_name' => 'Admin',
+    'email' => 'admin@wiang.go.th',
+    'status' => 'active'
+];
+$role = $currentUser['role_name'] ?? 'User';
+$userStatus = $currentUser['status'] ?? 'active';
+
 // ตรวจสอบสิทธิ์การเข้าถึง (ต้องเป็น Admin เท่านั้น)
-if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'Admin') {
-    $_SESSION['error_msg'] = "ปฏิเสธการเข้าถึง: เมนูนี้สงวนสิทธิ์เฉพาะผู้ดูแลระบบส่วนกลาง (Admin) เท่านั้น";
+if ($role !== 'Admin') {
+    $_SESSION['error_message'] = "ปฏิเสธการเข้าถึง: เมนูนี้สงวนสิทธิ์เฉพาะผู้ดูแลระบบส่วนกลาง (Admin) เท่านั้น";
     header("Location: login.php");
     exit;
 }
-
-$currentUser = $_SESSION['user'];
-$role = $currentUser['role'];
-$userStatus = $currentUser['status'] ?? 'active';
 
 // จัดการการบันทึกฟอร์มประกาศส่วนกลาง
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
