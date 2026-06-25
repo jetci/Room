@@ -12,7 +12,14 @@
             "Middleware\\": "middleware/",
             "Config\\": "config/",
             "Routes\\": "routes/"
-        }
+        },
+        "classmap": [
+            "app/",
+            "config/",
+            "services/",
+            "middleware/",
+            "routes/"
+        ]
     },
     "authors": [
         {
