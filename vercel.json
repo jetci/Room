@@ -1,9 +1,10 @@
 {
-  "functions": {
-    "public/*.php": {
-      "runtime": "vercel-php@0.6.0"
+  "builds": [
+    {
+      "src": "public/*.php",
+      "use": "vercel-php@0.6.0"
     }
-  },
+  ],
   "routes": [
     { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
     { "src": "/(.*)", "dest": "/public/$1" }
