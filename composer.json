@@ -1,0 +1,28 @@
+{
+    "name": "meeting-room-booking/system",
+    "description": "Smart Meeting Room Booking System with PHP 8 & MySQL",
+    "type": "project",
+    "require": {
+        "php": "^8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Services\\": "services/",
+            "Middleware\\": "middleware/",
+            "Config\\": "config/",
+            "Routes\\": "routes/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Developer",
+            "email": "developer@example.com"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

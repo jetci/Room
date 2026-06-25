@@ -1,0 +1,85 @@
+body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+.navbar-brand { font-weight: 700; color: #4338ca !important; }
+.sidebar { background: #ffffff; border-right: 1px solid #e2e8f0; min-height: calc(100vh - 72px); }
+.nav-link { color: #64748b; font-weight: 500; padding: 12px 20px; border-radius: 10px; margin-bottom: 5px; transition: all 0.2s ease-in-out; }
+.nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: #4338ca; font-weight: 600; }
+.card-stat { border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); transition: transform 0.2s, box-shadow 0.2s; }
+.card-stat:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06); }
+.icon-box { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.bg-indigo-light { background-color: #e0e7ff; color: #4338ca; }
+.bg-green-light { background-color: #dcfce7; color: #15803d; }
+.bg-yellow-light { background-color: #fef3c7; color: #b45309; }
+.bg-purple-light { background-color: #f3e8ff; color: #7e22ce; }
+.main-card { border: none; border-radius: 20px; box-shadow: 0 4px 25px rgba(0, 0, 0, 0.04); background: #ffffff; }
+.btn-custom-primary { background-color: #4338ca; color: white; border-radius: 12px; padding: 12px 28px; font-weight: 600; transition: all 0.2s; }
+.btn-custom-primary:hover { background-color: #3730a3; color: white; box-shadow: 0 6px 18px rgba(67, 56, 202, 0.35); }
+/* ==========================================================================
+   ✨ PREMIUM MINIMALIST & SOFT FULLCALENDAR (Global System)
+   ========================================================================== */
+.fc { font-family: 'Noto Sans Thai', sans-serif !important; }
+.fc .fc-toolbar-title { font-size: 1.5rem !important; font-weight: 700 !important; color: #1e293b !important; letter-spacing: -0.4px !important; }
+
+/* ปุ่ม Navigation (เดือน, สัปดาห์, วัน, วันนี้) */
+.fc .fc-button-primary { 
+    background-color: #f8fafc !important; 
+    color: #475569 !important; 
+    border: 1px solid #e2e8f0 !important; 
+    border-radius: 14px !important; 
+    padding: 10px 20px !important; 
+    font-weight: 600 !important; 
+    font-size: 0.95rem !important;
+    text-transform: capitalize !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+    transition: all 0.2s ease-in-out !important;
+}
+.fc .fc-button-primary:hover { background-color: #f1f5f9 !important; color: #0f172a !important; border-color: #cbd5e1 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; }
+.fc .fc-button-primary:not(:disabled):active,
+.fc .fc-button-primary:not(:disabled).fc-button-active { 
+    background-color: #4338ca !important; 
+    color: #ffffff !important; 
+    border-color: #4338ca !important; 
+    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.3) !important;
+}
+.fc .fc-button-primary:focus { box-shadow: none !important; }
+
+/* ลบขอบตารางแข็งกระด้าง และเปลี่ยนสีเส้นตารางให้นุ่มนวลสบายตา */
+.fc-theme-standard td, .fc-theme-standard th { border-color: #f1f5f9 !important; }
+.fc-theme-standard .fc-scrollgrid { border: 1px solid #f1f5f9 !important; border-radius: 24px !important; overflow: hidden !important; box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important; }
+
+/* ส่วนหัวตารางวัน (จันทร์-อาทิตย์) */
+.fc .fc-col-header-cell { padding: 16px 0 !important; background-color: #f8fafc !important; font-weight: 600 !important; color: #64748b !important; font-size: 0.95rem !important; border-bottom: 1px solid #e2e8f0 !important; }
+.fc .fc-col-header-cell-cushion { color: #475569 !important; font-weight: 600 !important; text-decoration: none !important; }
+
+/* ตัวเลขวันที่ในช่องตาราง */
+.fc .fc-daygrid-day-number { color: #64748b !important; font-weight: 500 !important; font-size: 0.9rem !important; padding: 12px !important; text-decoration: none !important; }
+.fc .fc-daygrid-day:hover .fc-daygrid-day-number { color: #4338ca !important; font-weight: 600 !important; }
+
+/* ไฮไลท์วันปัจจุบัน (Today View) ให้นุ่มนวลด้วยสีเขียวมิ้นต์พาสเทล */
+.fc .fc-day-today { background-color: #f0fdf4 !important; }
+.fc .fc-day-today .fc-daygrid-day-number { color: #16a34a !important; font-weight: 700 !important; font-size: 1rem !important; }
+
+/* สไตล์อีเวนต์ในปฏิทิน (Events) */
+.fc-event { 
+    border-radius: 10px !important; 
+    border: none !important; 
+    padding: 6px 12px !important; 
+    font-size: 0.85rem !important; 
+    font-weight: 600 !important; 
+    margin: 2px 6px 4px 6px !important; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; 
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important; 
+}
+.fc-event:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 16px rgba(0,0,0,0.15) !important; cursor: pointer; }
+.fc-event .fc-event-main { color: #ffffff !important; font-weight: 600 !important; letter-spacing: -0.1px; }
+
+/* ปรับพื้นหลังตารางให้ขาวสะอาด */
+.fc .fc-view-harness { background-color: #ffffff !important; border-radius: 24px !important; }
+
+.form-control, .form-select { border-radius: 12px; border: 1px solid #cbd5e1; padding: 12px 16px; font-size: 1rem; }
+.form-control:focus, .form-select:focus { border-color: #4338ca; box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.15); }
+.form-control::placeholder { color: #94a3b8 !important; opacity: 0.65 !important; font-style: italic; }
+.modal-content { border-radius: 24px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }

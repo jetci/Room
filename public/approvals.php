@@ -1,0 +1,379 @@
+<?php
+require_once __DIR__ . '/../routes/web.php';
+use App\Models\Booking;
+$rooms = Booking::getAllRooms();
+
+// จัดการกดอนุมัติ/ปฏิเสธ ทั้งการจองห้องและบัญชีสมาชิก
+if (isset($_GET['action']) && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    if ($_GET['action'] === 'approve_user') {
+        Booking::toggleUserStatus($id, 'active');
+        $_SESSION['approval_msg'] = "อนุมัติเปิดใช้งานบัญชีผู้ใช้ ID: $id สำเร็จเรียบร้อย";
+    } elseif ($_GET['action'] === 'reject_user') {
+        Booking::deleteUser($id);
+        $_SESSION['approval_msg'] = "ปฏิเสธและลบคำขอสมัครสมาชิก ID: $id เรียบร้อย";
+    } elseif (in_array($_GET['action'], ['approve', 'reject'])) {
+        $act = $_GET['action'] === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
+        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จเรียบร้อย";
+    }
+    header("Location: approvals.php");
+    exit;
+}
+
+$approvalMsg = $_SESSION['approval_msg'] ?? null;
+unset($_SESSION['approval_msg']);
+
+$allUsers = Booking::getAllUsers();
+$pendingUsers = array_filter($allUsers, fn($u) => $u['status'] === 'inactive');
+
+$currentUser = $_SESSION['user'] ?? [
+    'full_name' => 'คุณสมชาย บริหารดี',
+    'role_name' => 'Admin',
+    'email' => 'admin@wiang.go.th',
+    'status' => 'active'
+];
+$role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'Admin';
+$userStatus = $currentUser['status'] ?? 'active';
+$avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คิวรออนุมัติ (Approver) - Smart Room Booking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <!-- Flatpickr CSS & JS CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
+                <i class="fa-solid fa-building-flag me-2 fs-3 text-indigo"></i> 
+                <span class="fw-bold">SMART ROOM BOOKING (อบต.เวียง)</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
+                    <i class="fa-regular fa-bell fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?= count($pendingUsers) + 2 ?></span>
+                </button>
+                <div class="d-flex align-items-center me-3">
+                    <img src="https://ui-avatars.com/api/?name=<?= $avatarName ?>&background=10b981&color=fff" class="rounded-circle me-2" width="44" height="44">
+                    <div class="d-none d-md-block">
+                        <div class="fw-semibold fs-6 lh-1"><?= htmlspecialchars($currentUser['full_name']) ?></div>
+                        <span class="badge bg-green-light mt-1"><?= htmlspecialchars($role) ?></span>
+                    </div>
+                </div>
+                <a href="logout.php" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-semibold">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> ออกจากระบบ
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Layout -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-lg-2 d-none d-lg-block sidebar py-4 px-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.php"><i class="fa-solid fa-chart-pie me-3"></i> แดชบอร์ด</a>
+                    </li>
+                    <li class="nav-item">
+                        <?php if ($userStatus === 'inactive'): ?>
+                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-calendar-days me-3 text-secondary"></i> ปฏิทินการจอง <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
+                        <?php else: ?>
+                            <a class="nav-link" href="calendar.php"><i class="fa-solid fa-calendar-days me-3"></i> ปฏิทินการจอง</a>
+                        <?php endif; ?>
+                    </li>
+                    <li class="nav-item">
+                        <?php if ($userStatus === 'inactive'): ?>
+                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-magnifying-glass me-3 text-secondary"></i> ค้นหาห้องว่าง <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
+                        <?php else: ?>
+                            <a class="nav-link" href="search.php"><i class="fa-solid fa-magnifying-glass me-3"></i> ค้นหาห้องว่าง</a>
+                        <?php endif; ?>
+                    </li>
+
+                    <?php if ($role === 'Admin' || $role === 'Approver' || $role === 'Executive'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="approvals.php"><i class="fa-solid fa-user-clock me-3"></i> คิวรออนุมัติ <span class="badge bg-warning text-dark ms-2"><?= count($pendingUsers) + 2 ?></span></a>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if ($role === 'Executive'): ?>
+                        <li class="nav-item mt-4 mb-2"><span class="text-muted fs-7 fw-bold px-3">สำหรับผู้บริหาร (EXECUTIVE)</span></li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & สถิติภาพรวม</a>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if ($role === 'Admin'): ?>
+                        <li class="nav-item mt-4 mb-2"><span class="text-muted fs-7 fw-bold px-3">จัดการระบบ (ADMIN)</span></li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & Export</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+
+            <!-- Main Workspace -->
+            <div class="col-lg-10 p-4">
+                
+                <?php if ($approvalMsg): ?>
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
+                        <i class="fa-solid fa-circle-check fs-3 me-3"></i>
+                        <div><strong class="fw-bold">สำเร็จ!</strong> <?= htmlspecialchars($approvalMsg) ?></div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
+                <!-- SECTION 1: คิวรออนุมัติบัญชีสมาชิกใหม่ -->
+                <?php if ($role !== 'Executive'): ?>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-indigo"><i class="fa-solid fa-user-shield me-2"></i> คิวรออนุมัติบัญชีสมาชิกใหม่ (Member Registrations)</h4>
+                            <p class="text-muted mb-0">หน้าต่างสำหรับ **Approver (ผู้อนุมัติ)** ในการพิจารณาเปิดใช้งานบัญชีผู้ใช้ภายนอกและสมาชิกทั่วไป</p>
+                        </div>
+                        <span class="badge bg-indigo-light text-indigo px-4 py-2 fs-6 fw-bold">รออนุมัติ <?= count($pendingUsers) ?> บัญชี</span>
+                    </div>
+
+                    <div class="card main-card bg-white p-4 mb-5 shadow-sm" style="border-radius: 24px;">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="py-3 px-3">ผู้สมัคร</th>
+                                        <th scope="col" class="py-3">อีเมล (Email)</th>
+                                        <th scope="col" class="py-3">แผนก / สังกัด</th>
+                                        <th scope="col" class="py-3">วันที่สมัคร</th>
+                                        <th scope="col" class="py-3">สถานะ</th>
+                                        <th scope="col" class="py-3 text-end px-3">การตัดสินใจ (Approver Action)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (count($pendingUsers) > 0): ?>
+                                        <?php foreach ($pendingUsers as $u): ?>
+                                            <?php $nameEncoded = urlencode($u['full_name']); ?>
+                                            <tr>
+                                                <td class="px-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <img src="https://ui-avatars.com/api/?name=<?= $nameEncoded ?>&background=random&color=fff" class="rounded-circle me-3 shadow-sm" width="44" height="44">
+                                                        <div>
+                                                            <div class="fw-bold text-dark"><?= htmlspecialchars($u['full_name']) ?></div>
+                                                            <span class="text-muted fs-7"><i class="fa-solid fa-phone me-1"></i> <?= htmlspecialchars($u['phone'] ?? 'ไม่ระบุ') ?></span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-muted fw-semibold"><?= htmlspecialchars($u['email']) ?></td>
+                                                <td class="fw-semibold text-indigo"><?= htmlspecialchars($u['department_name'] ?? 'สมาชิกทั่วไป') ?></td>
+                                                <td class="text-muted fs-7"><?= date('d/m/') . (date('Y') + 543) ?></td>
+                                                <td><span class="badge bg-yellow-light text-warning px-3 py-2 fs-7 fw-bold"><i class="fa-solid fa-hourglass-half me-1"></i> รออนุมัติ (Pending)</span></td>
+                                                <td class="text-end px-3">
+                                                    <a href="approvals.php?action=approve_user&id=<?= $u['id'] ?>" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะอนุมัติเปิดใช้งานบัญชีนี้ใช่หรือไม่?');">
+                                                        <i class="fa-solid fa-user-check me-1"></i> อนุมัติ (Approve)
+                                                    </a>
+                                                    <a href="approvals.php?action=reject_user&id=<?= $u['id'] ?>" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณต้องการปฏิเสธและลบคำขอสมัครนี้ใช่หรือไม่?');">
+                                                        <i class="fa-solid fa-user-xmark me-1"></i> ปฏิเสธ (Reject)
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="6" class="text-center py-5 text-muted">
+                                                <i class="fa-solid fa-user-check fa-3x mb-3 text-success opacity-50"></i>
+                                                <div class="fw-bold fs-5">ไม่มีบัญชีสมาชิกใหม่รออนุมัติในขณะนี้</div>
+                                                <p class="fs-7 mb-0">บัญชีทั้งหมดได้รับการอนุมัติเรียบร้อยแล้ว</p>
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- SECTION 2: คิวรออนุมัติการจองห้องประชุม -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold mb-1"><i class="fa-solid fa-calendar-day me-2 text-primary"></i> คิวรออนุมัติการจองห้องประชุม (Room Booking Queue)</h4>
+                        <p class="text-muted mb-0">หน้าต่างสำหรับพิจารณาคำขอจองห้องประชุมจากพนักงานในองค์กร</p>
+                    </div>
+                    <button class="btn btn-custom-primary px-4 py-3 rounded-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#bookingModal">
+                        <i class="fa-solid fa-circle-plus me-2"></i> จองห้องประชุมใหม่
+                    </button>
+                </div>
+
+                <!-- Approval Queue Table Card -->
+                <div class="card main-card bg-white p-4 mb-5 shadow-sm" style="border-radius: 24px;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="py-3 px-3">ผู้จอง</th>
+                                    <th scope="col" class="py-3">หัวข้อ / การประชุม</th>
+                                    <th scope="col" class="py-3">ห้องประชุม</th>
+                                    <th scope="col" class="py-3">วัน-เวลาที่จอง</th>
+                                    <th scope="col" class="py-3">สถานะ</th>
+                                    <th scope="col" class="py-3 text-end px-3">จัดการ (Action)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณสมศรี อนุมัติการ</div>
+                                        <span class="text-muted fs-7">ฝ่าย HR</span>
+                                    </td>
+                                    <td class="fw-semibold">อัปเดตงานทีม Design & UX/UI</td>
+                                    <td>Room C - Creative Space</td>
+                                    <td><?= date('d/m/', strtotime('+1 day')) . (date('Y', strtotime('+1 day')) + 543) ?> (10:00 - 12:00)</td>
+                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold">รออนุมัติ (Pending)</span></td>
+                                    <td class="text-end px-3">
+                                        <?php if ($role === 'Executive'): ?>
+                                            <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
+                                        <?php else: ?>
+                                            <a href="approvals.php?action=approve&id=3" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
+                                            <a href="approvals.php?action=reject&id=3" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณใจดี พนักงานทั่วไป</div>
+                                        <span class="text-muted fs-7">ฝ่าย IT</span>
+                                    </td>
+                                    <td class="fw-semibold">ทดสอบระบบงานโปรแกรมเมอร์</td>
+                                    <td>Room D - Smart Pod 1</td>
+                                    <td><?= date('d/m/', strtotime('+2 days')) . (date('Y', strtotime('+2 days')) + 543) ?> (14:00 - 16:00)</td>
+                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold">รออนุมัติ (Pending)</span></td>
+                                    <td class="text-end px-3">
+                                        <?php if ($role === 'Executive'): ?>
+                                            <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
+                                        <?php else: ?>
+                                            <a href="approvals.php?action=approve&id=5" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
+                                            <a href="approvals.php?action=reject&id=5" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 🏷️ MODAL: Form จองห้องประชุม -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg" style="border-radius: 24px; border: none;">
+                <div class="modal-header bg-indigo-light p-4" style="border-top-left-radius: 24px; border-top-right-radius: 24px;">
+                    <h5 class="modal-title fw-bold text-indigo" id="bookingModalLabel"><i class="fa-solid fa-calendar-plus me-2"></i> เพิ่มรายการจองห้องประชุม</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form action="booking_store.php" method="POST" class="row g-3">
+                        <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">เลือกห้องประชุม <span class="text-danger">*</span></label>
+                            <select class="form-select p-3" name="room_id" required>
+                                <option value="">-- กรุณาเลือกห้องประชุม --</option>
+                                <?php foreach ($rooms as $r): ?>
+                                    <option value="<?= $r['id'] ?>"><?= htmlspecialchars($r['room_name']) ?> (<?= htmlspecialchars($r['location']) ?> - รองรับ <?= $r['capacity'] ?> คน)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">วันที่จอง <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control p-3 datepicker bg-white" name="meeting_date" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">เวลาเริ่มต้น <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control p-3 timepicker bg-white" name="start_time" value="09:00" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">เวลาสิ้นสุด <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control p-3 timepicker bg-white" name="end_time" value="11:30" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">หัวข้อการประชุม / Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control p-3" name="title" placeholder="ระบุหัวข้อการประชุม" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">จำนวนผู้เข้าร่วม (คน)</label>
+                            <input type="number" class="form-control p-3" name="attendee_count" placeholder="ตัวอย่าง: 12">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">วาระการประชุม / รายละเอียดเพิ่มเติม (Agenda)</label>
+                            <textarea class="form-control p-3" name="agenda" rows="3" placeholder="ระบุวาระหรือความต้องการพิเศษ"></textarea>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end mt-4">
+                            <button type="button" class="btn btn-light px-4 py-3 me-2 rounded-3 fw-semibold" data-bs-dismiss="modal">ยกเลิก</button>
+                            <button type="submit" class="btn btn-custom-primary px-5 py-3 rounded-3 fw-semibold"><i class="fa-solid fa-floppy-disk me-2"></i> บันทึกการจอง</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr(".datepicker", {
+                    locale: "th",
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d F Y",
+                    onReady: function(selectedDates, dateStr, instance) {
+                        if (instance.altInput && instance.selectedDates[0]) {
+                            const yearEl = instance.altInput;
+                            const d = instance.selectedDates[0];
+                            const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                            yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                        }
+                    },
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (instance.altInput && instance.selectedDates[0]) {
+                            const yearEl = instance.altInput;
+                            const d = instance.selectedDates[0];
+                            const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                            yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                        }
+                    }
+                });
+
+                flatpickr(".timepicker", {
+                    enableTime: true,
+                    noCalendar: true,
+                    dateFormat: "H:i",
+                    time_24hr: true
+                });
+            }
+        });
+    </script>
+</body>
+</html>
