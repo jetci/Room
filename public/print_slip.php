@@ -20,6 +20,10 @@ $meetingTime = isset($_GET['time']) ? htmlspecialchars($_GET['time']) : '09:00 -
 $attendees = isset($_GET['attendees']) ? (int)$_GET['attendees'] : 15;
 $bookingStatus = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : 'confirmed';
 
+$currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
+$currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
+$currentOrgAddress = $_SESSION['org_address'] ?? 'อำเภอเชียงคำ จังหวัดพะเยา 56110';
+
 $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode("https://github.com/jetci/Room/booking/" . $bookingId);
 ?>
 <!DOCTYPE html>
@@ -127,12 +131,13 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urle
 
                 <!-- Slip Header -->
                 <div class="header-box text-center">
-                    <!-- ตราครุฑจำลอง / ตรา อบต. -->
+                    <!-- ตราสัญลักษณ์ / โลโก้องค์กร -->
                     <div class="mb-3">
-                        <i class="fa-solid fa-building-flag fa-4x text-indigo" style="color: #4338ca;"></i>
+                        <img src="<?= $currentLogo ?>" alt="Organization Logo" style="max-height: 100px; width: auto; object-fit: contain;">
                     </div>
-                    <h2 class="fw-bold mb-1" style="color: #1e293b;">องค์การบริหารส่วนตำบลเวียง</h2>
-                    <h5 class="fw-semibold text-muted mb-3">ใบยืนยันการจองห้องประชุม (Smart Room Booking e-Memo)</h5>
+                    <h2 class="fw-bold mb-1" style="color: #1e293b;"><?= htmlspecialchars($currentOrgName) ?></h2>
+                    <p class="text-muted fs-7 mb-2"><?= htmlspecialchars($currentOrgAddress) ?></p>
+                    <h5 class="fw-semibold text-indigo mb-3">ใบยืนยันการจองห้องประชุม (Smart Room Booking e-Memo)</h5>
                     <div class="d-flex justify-content-between align-items-center mt-4 pt-2 border-top">
                         <div class="text-start">
                             <span class="text-muted fw-semibold fs-7">เลขที่อ้างอิงการจอง:</span>

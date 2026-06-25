@@ -15,6 +15,9 @@ $currentUser = $_SESSION['user'] ?? [
 $avatarName = urlencode($currentUser['full_name']);
 $role = $currentUser['role_name'] ?? 'User';
 $userStatus = $currentUser['status'] ?? 'active';
+
+$currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
+$currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -43,8 +46,8 @@ $userStatus = $currentUser['status'] ?? 'active';
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <i class="fa-solid fa-building-flag me-2 fs-3 text-indigo"></i> 
-                <span class="fw-bold">SMART ROOM BOOKING (อบต.เวียง)</span>
+                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3" style="max-height: 40px; width: auto;"> 
+                <span class="fw-bold">SMART ROOM BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
             </a>
             <div class="d-flex align-items-center">
                 <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
@@ -118,6 +121,9 @@ $userStatus = $currentUser['status'] ?? 'active';
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
