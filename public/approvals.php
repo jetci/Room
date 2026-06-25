@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
 use App\Models\Booking;
+use App\Helpers\EmailHelper;
 $rooms = Booking::getAllRooms();
 
 // จัดการกดอนุมัติ/ปฏิเสธ ทั้งการจองห้องและบัญชีสมาชิก
@@ -14,7 +15,20 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         $_SESSION['approval_msg'] = "ปฏิเสธและลบคำขอสมัครสมาชิก ID: $id เรียบร้อย";
     } elseif (in_array($_GET['action'], ['approve', 'reject'])) {
         $act = $_GET['action'] === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
-        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จเรียบร้อย";
+        $statusKey = $_GET['action'] === 'approve' ? 'approved' : 'rejected';
+        
+        // ข้อมูลจำลองการจองสำหรับส่งอีเมล
+        $mockBooking = [
+            'title' => 'ประชุมจัดทำแผนงบประมาณประจำปี 2569 (อบต.เวียง)',
+            'room_name' => 'Room A - Grand Auditorium',
+            'meeting_date' => '28 มิถุนายน 2569',
+            'start_time' => '09:00',
+            'end_time' => '12:00'
+        ];
+        
+        EmailHelper::sendBookingStatusEmail($mockBooking, $statusKey, 'user@wiang.go.th', 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
+        
+        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จ พร้อมส่งอีเมลแจ้งเตือนไปยังผู้จองเรียบร้อยแล้ว";
     }
     header("Location: approvals.php");
     exit;
@@ -22,6 +36,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 
 $approvalMsg = $_SESSION['approval_msg'] ?? null;
 unset($_SESSION['approval_msg']);
+$lastSentEmail = $_SESSION['last_sent_email'] ?? null;
 
 $allUsers = Booking::getAllUsers();
 $pendingUsers = array_filter($allUsers, fn($u) => $u['status'] === 'inactive');
@@ -141,10 +156,47 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
             <div class="col-lg-10 p-4">
                 
                 <?php if ($approvalMsg): ?>
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
-                        <i class="fa-solid fa-circle-check fs-3 me-3"></i>
-                        <div><strong class="fw-bold">สำเร็จ!</strong> <?= htmlspecialchars($approvalMsg) ?></div>
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center justify-content-between p-4 mb-4 shadow-sm" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-circle-check fs-3 me-3"></i>
+                            <div><strong class="fw-bold">สำเร็จ!</strong> <?= htmlspecialchars($approvalMsg) ?></div>
+                        </div>
+                        <?php if ($lastSentEmail): ?>
+                            <button type="button" class="btn btn-sm btn-custom-primary px-3 py-2 fw-semibold rounded-3 shadow-sm me-4" data-bs-toggle="modal" data-bs-target="#emailSimulationModal">
+                                <i class="fa-solid fa-envelope-open-text me-2"></i> ดูตัวอย่างอีเมลที่ส่ง
+                            </button>
+                        <?php endif; ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Email Simulation Modal -->
+                <?php if ($lastSentEmail): ?>
+                    <div class="modal fade" id="emailSimulationModal" tabindex="-1" aria-labelledby="emailSimulationModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content rounded-4 border-0 shadow-lg">
+                                <div class="modal-header bg-light border-bottom-0 py-3 px-4">
+                                    <h5 class="modal-title fw-bold text-indigo" id="emailSimulationModalLabel">
+                                        <i class="fa-solid fa-satellite-dish me-2 text-primary"></i> กล่องจำลองการส่งอีเมล (Mock Email Gateway)
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <div class="mb-3 pb-3 border-bottom fs-7">
+                                        <div class="mb-1"><span class="fw-bold text-muted me-2">ผู้รับ (To):</span> <span class="text-dark fw-semibold"><?= htmlspecialchars($lastSentEmail['recipient']) ?></span></div>
+                                        <div class="mb-1"><span class="fw-bold text-muted me-2">หัวข้อ (Subject):</span> <span class="text-indigo fw-bold"><?= htmlspecialchars($lastSentEmail['subject']) ?></span></div>
+                                        <div><span class="fw-bold text-muted me-2">วันที่ส่ง (Sent At):</span> <span class="text-secondary"><?= htmlspecialchars($lastSentEmail['sent_at']) ?></span></div>
+                                    </div>
+                                    <div class="bg-white p-2">
+                                        <?= $lastSentEmail['body'] ?>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-light border-top-0 py-3 px-4">
+                                    <span class="text-muted fs-7 me-auto"><i class="fa-solid fa-circle-info me-1"></i> รองรับการเชื่อมต่อผ่าน API ของ Resend/Mailgun ในระบบโปรดักชัน</span>
+                                    <button type="button" class="btn btn-secondary px-4 py-2 rounded-3 fw-semibold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 <?php endif; ?>
 
