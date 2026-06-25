@@ -349,20 +349,56 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                     altInput: true,
                     altFormat: "d F Y",
                     onReady: function(selectedDates, dateStr, instance) {
-                        if (instance.altInput && instance.selectedDates[0]) {
-                            const yearEl = instance.altInput;
-                            const d = instance.selectedDates[0];
-                            const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-                            yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                        function updateBuddhistYear() {
+                            if (instance.currentYearElement) {
+                                instance.currentYearElement.value = instance.currentYear + 543;
+                            }
+                            if (instance.yearElements && instance.yearElements[0]) {
+                                instance.yearElements[0].value = instance.currentYear + 543;
+                            }
+                            if (instance.altInput && instance.selectedDates[0]) {
+                                const yearEl = instance.altInput;
+                                const d = instance.selectedDates[0];
+                                const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                                yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                            }
+                        }
+                        updateBuddhistYear();
+                        if (instance.calendarContainer) {
+                            instance.calendarContainer.addEventListener('click', function() {
+                                setTimeout(updateBuddhistYear, 10);
+                            });
                         }
                     },
+                    onOpen: function(selectedDates, dateStr, instance) {
+                        setTimeout(function() {
+                            if (instance.currentYearElement) instance.currentYearElement.value = instance.currentYear + 543;
+                            if (instance.yearElements && instance.yearElements[0]) instance.yearElements[0].value = instance.currentYear + 543;
+                        }, 10);
+                    },
+                    onMonthChange: function(selectedDates, dateStr, instance) {
+                        setTimeout(function() {
+                            if (instance.currentYearElement) instance.currentYearElement.value = instance.currentYear + 543;
+                            if (instance.yearElements && instance.yearElements[0]) instance.yearElements[0].value = instance.currentYear + 543;
+                        }, 10);
+                    },
+                    onYearChange: function(selectedDates, dateStr, instance) {
+                        setTimeout(function() {
+                            if (instance.currentYearElement) instance.currentYearElement.value = instance.currentYear + 543;
+                            if (instance.yearElements && instance.yearElements[0]) instance.yearElements[0].value = instance.currentYear + 543;
+                        }, 10);
+                    },
                     onChange: function(selectedDates, dateStr, instance) {
-                        if (instance.altInput && instance.selectedDates[0]) {
-                            const yearEl = instance.altInput;
-                            const d = instance.selectedDates[0];
-                            const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-                            yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-                        }
+                        setTimeout(function() {
+                            if (instance.altInput && instance.selectedDates[0]) {
+                                const yearEl = instance.altInput;
+                                const d = instance.selectedDates[0];
+                                const thMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                                yearEl.value = d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                            }
+                            if (instance.currentYearElement) instance.currentYearElement.value = instance.currentYear + 543;
+                            if (instance.yearElements && instance.yearElements[0]) instance.yearElements[0].value = instance.currentYear + 543;
+                        }, 10);
                     }
                 });
 
