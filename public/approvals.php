@@ -348,6 +348,7 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                     dateFormat: "Y-m-d",
                     altInput: true,
                     altFormat: "d F Y",
+                    minDate: "today",
                     onReady: function(selectedDates, dateStr, instance) {
                         function updateBuddhistYear() {
                             if (instance.currentYearElement) {
