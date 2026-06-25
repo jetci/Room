@@ -27,8 +27,9 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         ];
         
         EmailHelper::sendBookingStatusEmail($mockBooking, $statusKey, 'user@wiang.go.th', 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
+        EmailHelper::sendLineNotify($mockBooking, $statusKey, 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
         
-        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จ พร้อมส่งอีเมลแจ้งเตือนไปยังผู้จองเรียบร้อยแล้ว";
+        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จ พร้อมส่งอีเมลและข้อความ LINE Notify แจ้งเตือนเรียบร้อยแล้ว";
     }
     header("Location: approvals.php");
     exit;
@@ -37,6 +38,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 $approvalMsg = $_SESSION['approval_msg'] ?? null;
 unset($_SESSION['approval_msg']);
 $lastSentEmail = $_SESSION['last_sent_email'] ?? null;
+$lastSentLine = $_SESSION['last_sent_line'] ?? null;
 
 $allUsers = Booking::getAllUsers();
 $pendingUsers = array_filter($allUsers, fn($u) => $u['status'] === 'inactive');
@@ -50,6 +52,9 @@ $currentUser = $_SESSION['user'] ?? [
 $role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'Admin';
 $userStatus = $currentUser['status'] ?? 'active';
 $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
+
+$currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
+$currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -72,8 +77,8 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <i class="fa-solid fa-building-flag me-2 fs-3 text-indigo"></i> 
-                <span class="fw-bold">SMART ROOM BOOKING (อบต.เวียง)</span>
+                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;"> 
+                <span class="fw-bold">SMART ROOM BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
             </a>
             <div class="d-flex align-items-center">
                 <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
@@ -117,6 +122,13 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                             <a class="nav-link" href="search.php"><i class="fa-solid fa-magnifying-glass me-3"></i> ค้นหาห้องว่าง</a>
                         <?php endif; ?>
                     </li>
+                    <li class="nav-item">
+                        <?php if ($userStatus === 'inactive'): ?>
+                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-futbol me-3 text-secondary"></i> จองสนามกีฬา & อุปกรณ์ <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
+                        <?php else: ?>
+                            <a class="nav-link" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a>
+                        <?php endif; ?>
+                    </li>
 
                     <?php if ($role === 'Admin' || $role === 'Approver' || $role === 'Executive'): ?>
                         <li class="nav-item">
@@ -137,6 +149,9 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                             <a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a>
                         </li>
                         <li class="nav-item">
@@ -144,6 +159,12 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
@@ -161,11 +182,18 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                             <i class="fa-solid fa-circle-check fs-3 me-3"></i>
                             <div><strong class="fw-bold">สำเร็จ!</strong> <?= htmlspecialchars($approvalMsg) ?></div>
                         </div>
-                        <?php if ($lastSentEmail): ?>
-                            <button type="button" class="btn btn-sm btn-custom-primary px-3 py-2 fw-semibold rounded-3 shadow-sm me-4" data-bs-toggle="modal" data-bs-target="#emailSimulationModal">
-                                <i class="fa-solid fa-envelope-open-text me-2"></i> ดูตัวอย่างอีเมลที่ส่ง
-                            </button>
-                        <?php endif; ?>
+                        <div class="d-flex gap-2 me-4">
+                            <?php if ($lastSentEmail): ?>
+                                <button type="button" class="btn btn-sm btn-custom-primary px-3 py-2 fw-semibold rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#emailSimulationModal">
+                                    <i class="fa-solid fa-envelope-open-text me-2"></i> ดูตัวอย่างอีเมลที่ส่ง
+                                </button>
+                            <?php endif; ?>
+                            <?php if ($lastSentLine): ?>
+                                <button type="button" class="btn btn-sm px-3 py-2 fw-semibold rounded-3 shadow-sm text-white" style="background-color: #06c755; border: none;" data-bs-toggle="modal" data-bs-target="#lineSimulationModal">
+                                    <i class="fa-brands fa-line me-2 fs-6"></i> ดูข้อความ LINE Notify
+                                </button>
+                            <?php endif; ?>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
@@ -193,6 +221,40 @@ $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
                                 </div>
                                 <div class="modal-footer bg-light border-top-0 py-3 px-4">
                                     <span class="text-muted fs-7 me-auto"><i class="fa-solid fa-circle-info me-1"></i> รองรับการเชื่อมต่อผ่าน API ของ Resend/Mailgun ในระบบโปรดักชัน</span>
+                                    <button type="button" class="btn btn-secondary px-4 py-2 rounded-3 fw-semibold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- LINE Notify Simulation Modal -->
+                <?php if ($lastSentLine): ?>
+                    <div class="modal fade" id="lineSimulationModal" tabindex="-1" aria-labelledby="lineSimulationModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content rounded-4 border-0 shadow-lg" style="background-color: #849eb2;">
+                                <div class="modal-header border-bottom-0 py-3 px-4 bg-white rounded-top-4">
+                                    <h5 class="modal-title fw-bold" id="lineSimulationModalLabel" style="color: #06c755;">
+                                        <i class="fa-brands fa-line me-2 fs-4"></i> LINE Notify Gateway Simulation
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <div class="text-center mb-3">
+                                        <span class="badge bg-dark-subtle text-dark px-3 py-1 fs-8 rounded-pill"><?= htmlspecialchars($lastSentLine['group_name']) ?></span>
+                                    </div>
+                                    <div class="d-flex align-items-start mb-3">
+                                        <div class="bg-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 44px; height: 44px; border: 2px solid #06c755;">
+                                            <i class="fa-brands fa-line fs-3 text-success"></i>
+                                        </div>
+                                        <div class="flex-grow-1 bg-white p-4 rounded-4 shadow-sm position-relative" style="max-width: 85%;">
+                                            <div class="fw-bold mb-2 text-dark fs-7">LINE Notify <span class="text-muted fw-normal fs-8 ms-2"><?= htmlspecialchars($lastSentLine['sent_at']) ?></span></div>
+                                            <div class="text-dark fs-6" style="white-space: pre-wrap; line-height: 1.6; font-family: 'Sarabun', sans-serif;"><?= htmlspecialchars($lastSentLine['message']) ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-white border-top-0 py-3 px-4 rounded-bottom-4">
+                                    <span class="text-muted fs-7 me-auto"><i class="fa-solid fa-circle-info me-1"></i> ยิงผ่าน cURL ไปยัง Notify API อัตโนมัติ</span>
                                     <button type="button" class="btn btn-secondary px-4 py-2 rounded-3 fw-semibold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
                                 </div>
                             </div>

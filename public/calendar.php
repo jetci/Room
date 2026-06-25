@@ -19,6 +19,9 @@ if ($userStatus === 'inactive') {
 }
 
 $rooms = Booking::getAllRooms();
+
+$currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
+$currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -106,8 +109,8 @@ $rooms = Booking::getAllRooms();
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <i class="fa-solid fa-building-flag me-2 fs-3 text-indigo"></i> 
-                <span class="fw-bold">SMART ROOM BOOKING (อบต.เวียง)</span>
+                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;"> 
+                <span class="fw-bold">SMART ROOM BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
             </a>
             <div class="d-flex align-items-center">
                 <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
@@ -151,6 +154,13 @@ $rooms = Booking::getAllRooms();
                             <a class="nav-link" href="search.php"><i class="fa-solid fa-magnifying-glass me-3"></i> ค้นหาห้องว่าง</a>
                         <?php endif; ?>
                     </li>
+                    <li class="nav-item">
+                        <?php if ($userStatus === 'inactive'): ?>
+                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-futbol me-3 text-secondary"></i> จองสนามกีฬา & อุปกรณ์ <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
+                        <?php else: ?>
+                            <a class="nav-link" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a>
+                        <?php endif; ?>
+                    </li>
 
                     <?php if ($role === 'Admin' || $role === 'Approver' || $role === 'Executive'): ?>
                         <li class="nav-item">
@@ -171,6 +181,9 @@ $rooms = Booking::getAllRooms();
                             <a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a>
                         </li>
                         <li class="nav-item">
@@ -178,6 +191,12 @@ $rooms = Booking::getAllRooms();
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
@@ -262,9 +281,70 @@ $rooms = Booking::getAllRooms();
         </div>
     </div>
 
+    <!-- EVENT DETAILS MODAL (แสดงรายละเอียดทั้งหมดให้เจ้าหน้าที่รับจองเห็น) -->
+    <div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b, #312e81); color: white; border-radius: 24px 24px 0 0; padding: 24px 32px;">
+                    <div>
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold fs-8 mb-2"><i class="fa-solid fa-address-card me-2"></i>ข้อมูลการจองฉบับเต็มสำหรับเจ้าหน้าที่</span>
+                        <h4 class="modal-title fw-bold" id="detailTitle">หัวข้อการประชุม</h4>
+                        <p class="mb-0 fs-7 text-indigo-200" id="detailFacility"><i class="fa-solid fa-location-dot me-2 text-warning"></i> ห้องประชุม / สนามกีฬา</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-5">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-4 bg-slate-50 rounded-4 border h-100">
+                                <div class="text-muted fs-8 fw-bold mb-1"><i class="fa-solid fa-building me-2 text-indigo"></i>หน่วยงานที่จอง (DEPARTMENT)</div>
+                                <div class="fs-5 fw-bold text-dark" id="detailDepartment">กองคลัง</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 bg-slate-50 rounded-4 border h-100">
+                                <div class="text-muted fs-8 fw-bold mb-1"><i class="fa-solid fa-user-check me-2 text-indigo"></i>ผู้จอง / เบอร์ติดต่อ (BOOKED BY)</div>
+                                <div class="fs-5 fw-bold text-dark" id="detailBooker">คุณสมชาย บริหารดี</div>
+                                <div class="fs-7 text-muted mt-1" id="detailPhone"><i class="fa-solid fa-phone me-1 text-success"></i> 081-2345678</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 bg-slate-50 rounded-4 border h-100">
+                                <div class="text-muted fs-8 fw-bold mb-1"><i class="fa-regular fa-calendar-check me-2 text-indigo"></i>วัน-เวลาที่เข้าใช้ (TIME)</div>
+                                <div class="fs-6 fw-bold text-dark" id="detailDateTime">25 มิถุนายน 2569 | 09:00 - 11:30 น.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 bg-slate-50 rounded-4 border h-100">
+                                <div class="text-muted fs-8 fw-bold mb-1"><i class="fa-solid fa-circle-check me-2 text-indigo"></i>สถานะการจอง (STATUS)</div>
+                                <div class="fs-6 fw-bold text-success" id="detailStatus"><i class="fa-solid fa-circle-check me-2"></i>ได้รับการอนุมัติแล้ว</div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="p-4 bg-indigo-subtle text-indigo rounded-4 border">
+                                <div class="fw-bold fs-7 mb-1"><i class="fa-solid fa-box-open me-2"></i>อุปกรณ์และสิ่งอำนวยความสะดวกที่ขอยืม:</div>
+                                <p class="text-dark fw-semibold mb-0 fs-7" id="detailEquipments">โปรเจกเตอร์, ไมโครโฟน 2 ตัว</p>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="p-4 bg-light rounded-4 border">
+                                <div class="fw-bold fs-7 text-secondary mb-1"><i class="fa-solid fa-file-lines me-2 text-indigo"></i>วาระการประชุม / หมายเหตุเพิ่มเติม:</div>
+                                <p class="text-muted mb-0 fs-7" id="detailAgenda">ไม่มีหมายเหตุเพิ่มเติม</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-4 d-flex justify-content-end">
+                    <button type="button" class="btn btn-custom-primary px-5 py-3 rounded-3 fw-bold shadow-sm" data-bs-dismiss="modal"><i class="fa-solid fa-circle-check me-2"></i> รับทราบข้อมูล</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const eventDetailsModal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             const calendarEl = document.getElementById('fullpage-calendar');
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -289,11 +369,110 @@ $rooms = Booking::getAllRooms();
                     }
                 },
                 events: [
-                    { title: 'Room A: ประชุมงบประมาณไตรมาส 3', start: '2026-06-25T09:00:00', end: '2026-06-25T11:30:00', backgroundColor: '#4338ca', borderColor: '#4338ca' },
-                    { title: 'Room B: สัมภาษณ์พนักงานใหม่', start: '2026-06-25T13:00:00', end: '2026-06-25T15:00:00', backgroundColor: '#10b981', borderColor: '#10b981' },
-                    { title: 'Room C: อัปเดตงานทีม Design', start: '2026-06-26T10:00:00', end: '2026-06-26T12:00:00', backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
-                    { title: 'Room A: อบรมการป้องกันความปลอดภัยทางไซเบอร์', start: '2026-06-27T13:30:00', end: '2026-06-27T16:30:00', backgroundColor: '#4338ca', borderColor: '#4338ca' }
-                ]
+                    { 
+                        title: '[ห้องประชุมใหญ่] กองคลัง (คุณสมชาย) - ประชุมงบประมาณไตรมาส 3', 
+                        start: '2026-06-25T09:00:00', 
+                        end: '2026-06-25T11:30:00', 
+                        backgroundColor: '#4338ca', 
+                        borderColor: '#4338ca',
+                        extendedProps: {
+                            facility: 'ห้องประชุมใหญ่ (ชั้น 2 อาคารสำนักงาน)',
+                            department: 'กองคลัง',
+                            booker: 'คุณสมชาย บริหารดี',
+                            phone: '081-2345678',
+                            titleName: 'ประชุมงบประมาณไตรมาส 3',
+                            displayTime: '25 มิถุนายน 2569 | 09:00 - 11:30 น.',
+                            status: 'อนุมัติแล้ว (Approved)',
+                            equipments: 'โปรเจกเตอร์ 4K, ไมโครโฟนไร้สาย 4 ตัว, ชา/กาแฟ 15 ชุด',
+                            agenda: 'พิจารณาอนุมัติกรอบงบประมาณประจำไตรมาสที่ 3 และวางแผนการจัดซื้อจัดจ้าง'
+                        }
+                    },
+                    { 
+                        title: '[ห้องประชุมสภา] กองช่าง (คุณวิชัย) - สัมภาษณ์พนักงานใหม่', 
+                        start: '2026-06-25T13:00:00', 
+                        end: '2026-06-25T15:00:00', 
+                        backgroundColor: '#10b981', 
+                        borderColor: '#10b981',
+                        extendedProps: {
+                            facility: 'ห้องประชุมสภา อบต. (ชั้น 3)',
+                            department: 'กองช่าง',
+                            booker: 'คุณวิชัย สถาปัตย์',
+                            phone: '082-9876543',
+                            titleName: 'สัมภาษณ์พนักงานใหม่และผู้รับเหมา',
+                            displayTime: '25 มิถุนายน 2569 | 13:00 - 15:00 น.',
+                            status: 'อนุมัติแล้ว (Approved)',
+                            equipments: 'จอ LED Touchscreen, กระดานไวท์บอร์ด',
+                            agenda: 'สัมภาษณ์คัดเลือกวิศวกรโยธาและสถาปนิกประจำโครงการพัฒนาถนนชุมชน'
+                        }
+                    },
+                    { 
+                        title: '[ห้องประชุมสภา] กองสวัสดิการสังคม (คุณอนงค์) - อัปเดตงานชุมชน', 
+                        start: '2026-06-26T10:00:00', 
+                        end: '2026-06-26T12:00:00', 
+                        backgroundColor: '#f59e0b', 
+                        borderColor: '#f59e0b',
+                        extendedProps: {
+                            facility: 'ห้องประชุมสภา อบต. (ชั้น 3)',
+                            department: 'กองสวัสดิการสังคม',
+                            booker: 'คุณอนงค์ เมตตาจิต',
+                            phone: '083-4567890',
+                            titleName: 'อัปเดตโครงการสงเคราะห์ผู้สูงอายุและผู้ยากไร้',
+                            displayTime: '26 มิถุนายน 2569 | 10:00 - 12:00 น.',
+                            status: 'อนุมัติแล้ว (Approved)',
+                            equipments: 'ชุดไมโครโฟน 10 ตัว, โพเดียมบรรยาย',
+                            agenda: 'ประเมินผลการมอบเบี้ยยังชีพผู้สูงอายุและหารือแนวทางปรับปรุงเบี้ยช่วยเหลือ'
+                        }
+                    },
+                    { 
+                        title: '[ห้องประชุมใหญ่] กองการศึกษา (คุณสุเมธ) - อบรมไซเบอร์ซีเคียวริตี้', 
+                        start: '2026-06-27T13:30:00', 
+                        end: '2026-06-27T16:30:00', 
+                        backgroundColor: '#4338ca', 
+                        borderColor: '#4338ca',
+                        extendedProps: {
+                            facility: 'ห้องประชุมใหญ่ (ชั้น 2 อาคารสำนักงาน)',
+                            department: 'กองการศึกษา ศาสนาและวัฒนธรรม',
+                            booker: 'คุณสุเมธ ปัญญาเลิศ',
+                            phone: '089-1122334',
+                            titleName: 'อบรมการป้องกันความปลอดภัยทางไซเบอร์',
+                            displayTime: '27 มิถุนายน 2569 | 13:30 - 16:30 น.',
+                            status: 'อนุมัติแล้ว (Approved)',
+                            equipments: 'ระบบบันทึกเสียงและภาพวิดีโอ (Recording System), โปรเจกเตอร์หลัก',
+                            agenda: 'สร้างความตระหนักรู้เรื่อง Phishing, Ransomware และการคุ้มครองข้อมูลส่วนบุคคล (PDPA)'
+                        }
+                    },
+                    { 
+                        title: '[สนามฟุตบอลหญ้าเทียม] กองสาธารณสุข (คุณพงษ์) - แข่งกระชับมิตร', 
+                        start: '2026-06-28T17:00:00', 
+                        end: '2026-06-28T19:30:00', 
+                        backgroundColor: '#ec4899', 
+                        borderColor: '#ec4899',
+                        extendedProps: {
+                            facility: 'สนามฟุตบอลหญ้าเทียม (ลานกีฬาสวนสาธารณะเวียง)',
+                            department: 'กองสาธารณสุขและสิ่งแวดล้อม',
+                            booker: 'คุณพงษ์ศักดิ์ แข็งขัน',
+                            phone: '085-5556666',
+                            titleName: 'แข่งฟุตบอลกระชับมิตรส่งเสริมสุขภาพ',
+                            displayTime: '28 มิถุนายน 2569 | 17:00 - 19:30 น.',
+                            status: 'อนุมัติแล้ว (Approved)',
+                            equipments: 'ลูกฟุตบอล 2 ลูก, เสื้อเอี๊ยม 20 ตัว, บริการเปิดไฟสปอตไลท์สนาม',
+                            agenda: 'กิจกรรมสันทนาการกระชับความสัมพันธ์ระหว่างบุคลากรและเจ้าหน้าที่ป้องกันสาธารณภัย'
+                        }
+                    }
+                ],
+                eventClick: function(info) {
+                    const props = info.event.extendedProps;
+                    document.getElementById('detailTitle').innerText = props.titleName || info.event.title;
+                    document.getElementById('detailFacility').innerHTML = `<i class="fa-solid fa-location-dot me-2 text-warning"></i> ${props.facility || 'ไม่ระบุสถานที่'}`;
+                    document.getElementById('detailDepartment').innerText = props.department || 'ไม่ระบุหน่วยงาน';
+                    document.getElementById('detailBooker').innerText = props.booker || 'ไม่ระบุชื่อผู้จอง';
+                    document.getElementById('detailPhone').innerHTML = `<i class="fa-solid fa-phone me-1 text-success"></i> ${props.phone || 'ไม่ระบุเบอร์ติดต่อ'}`;
+                    document.getElementById('detailDateTime').innerText = props.displayTime || 'ไม่ระบุเวลา';
+                    document.getElementById('detailEquipments').innerText = props.equipments || 'ไม่มีอุปกรณ์ที่ขอยืม';
+                    document.getElementById('detailAgenda').innerText = props.agenda || 'ไม่มีหมายเหตุเพิ่มเติม';
+                    
+                    eventDetailsModal.show();
+                }
             });
             calendar.render();
 

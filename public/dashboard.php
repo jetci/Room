@@ -46,8 +46,8 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3" style="max-height: 40px; width: auto;"> 
-                <span class="fw-bold">SMART ROOM BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
+                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;"> 
+                <span class="fw-bold">SMART FACILITY BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
             </a>
             <div class="d-flex align-items-center">
                 <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
@@ -91,6 +91,13 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                             <a class="nav-link" href="search.php"><i class="fa-solid fa-magnifying-glass me-3"></i> ค้นหาห้องว่าง</a>
                         <?php endif; ?>
                     </li>
+                    <li class="nav-item">
+                        <?php if ($userStatus === 'inactive'): ?>
+                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-futbol me-3 text-secondary"></i> จองสนามกีฬา & อุปกรณ์ <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
+                        <?php else: ?>
+                            <a class="nav-link" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a>
+                        <?php endif; ?>
+                    </li>
 
                     <?php if ($role === 'Admin' || $role === 'Approver' || $role === 'Executive'): ?>
                         <li class="nav-item">
@@ -109,6 +116,9 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                         <li class="nav-item mt-4 mb-2"><span class="text-muted fs-7 fw-bold px-3">จัดการระบบ (ADMIN)</span></li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a>

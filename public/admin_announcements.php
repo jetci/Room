@@ -51,6 +51,9 @@ $announcement = $_SESSION['announcement'] ?? [
     'message' => 'ในวันเสาร์ที่ 4 กรกฎาคม 2569 ห้องประชุมสภาใหญ่ (Room A) และห้องประชุมเล็ก (Room B) จะงดให้บริการชั่วคราวเพื่อซ่อมบำรุงประจำปี ขออภัยในความไม่สะดวกมา ณ ที่นี้',
     'updated_at' => date('Y-m-d H:i:s')
 ];
+
+$currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
+$currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -77,10 +80,10 @@ $announcement = $_SESSION['announcement'] ?? [
     <nav class="navbar navbar-expand-lg bg-white border-bottom py-3 sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <i class="fa-solid fa-building-flag fa-2x me-3 text-indigo"></i>
+                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;">
                 <div>
-                    <span class="fw-bold fs-5 text-indigo">ระบบจองห้องประชุมออนไลน์</span><br>
-                    <span class="fs-7 text-secondary">องค์การบริหารส่วนตำบลเวียง (Smart Room Booking)</span>
+                    <span class="fw-bold fs-5 text-indigo"><?= htmlspecialchars($currentOrgName) ?></span><br>
+                    <span class="fs-7 text-secondary">ระบบจองห้องประชุมออนไลน์ (Smart Room Booking)</span>
                 </div>
             </a>
             <div class="d-flex align-items-center gap-3">
@@ -108,6 +111,7 @@ $announcement = $_SESSION['announcement'] ?? [
                 <ul class="nav flex-column mb-4">
                     <li class="nav-item"><a class="nav-link" href="dashboard.php"><i class="fa-solid fa-chart-pie me-3"></i> หน้าหลัก (Dashboard)</a></li>
                     <li class="nav-item"><a class="nav-link" href="search.php"><i class="fa-solid fa-calendar-days me-3"></i> ค้นหา & จองห้อง</a></li>
+                    <li class="nav-item"><a class="nav-link" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a></li>
                     <li class="nav-item"><a class="nav-link" href="calendar.php"><i class="fa-solid fa-calendar-view-month me-3"></i> ปฏิทินการจอง</a></li>
                     <li class="nav-item"><a class="nav-link" href="approvals.php"><i class="fa-solid fa-inbox me-3"></i> คิวรออนุมัติ</a></li>
                     <li class="nav-item"><a class="nav-link" href="register_ext.php"><i class="fa-solid fa-user-plus me-3"></i> คำขอลงทะเบียน</a></li>
@@ -116,10 +120,12 @@ $announcement = $_SESSION['announcement'] ?? [
                 <div class="text-muted fs-8 fw-bold text-uppercase mb-3 px-3">สำหรับแอดมิน (Admin)</div>
                 <ul class="nav flex-column">
                     <li class="nav-item"><a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a></li>
+                    <li class="nav-item"><a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a></li>
                     <li class="nav-item"><a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a></li>
                     <li class="nav-item"><a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & Export</a></li>
                     <li class="nav-item"><a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a></li>
                     <li class="nav-item"><a class="nav-link active" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a></li>
+                    <li class="nav-item"><a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a></li>
                     <li class="nav-item"><a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a></li>
                 </ul>
             </div>

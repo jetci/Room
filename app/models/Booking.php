@@ -460,4 +460,192 @@ class Booking
             return false;
         }
     }
+
+    /**
+     * ดึงข้อมูลสนามกีฬาและลานกีฬาอเนกประสงค์ทั้งหมด (Sports Facilities)
+     */
+    public static function getAllSportsFacilities(): array
+    {
+        try {
+            $db = Database::getConnection();
+            $stmt = $db->query("SELECT * FROM sports_facilities WHERE status = 'active' ORDER BY id ASC");
+            $facilities = $stmt->fetchAll();
+            if (!empty($facilities)) {
+                return $facilities;
+            }
+        } catch (PDOException $e) {
+            // Fallback mock data สำหรับสนามกีฬาของ อบต.เวียง
+        }
+
+        return [
+            [
+                'id' => 1, 
+                'facility_name' => 'สนามฟุตบอลหญ้าเทียม อบต.เวียง (Wiang Football Turf)', 
+                'category' => 'สนามฟุตบอล / ฟุตซอล',
+                'location' => 'ศูนย์กีฬาชุมชน อบต.เวียง โซน A', 
+                'capacity' => 22, 
+                'available_equipments' => 'ลูกฟุตบอล 5 ลูก, เสื้อเอี๊ยมแบ่งทีม (2 สี), ไฟส่องสว่างสปอตไลท์ (กลางคืน), ตู้กดน้ำดื่ม', 
+                'rules' => 'กรุณาสวมรองเท้าฟุตบอลหรือรองเท้าผ้าใบเท่านั้น, ไม่อนุญาตให้นำอาหารขึ้นสนาม',
+                'images' => [
+                    'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80'
+                ]
+            ],
+            [
+                'id' => 2, 
+                'facility_name' => 'ลานกีฬาอเนกประสงค์ / สนามบาสเกตบอล (Multipurpose Court)', 
+                'category' => 'สนามบาสเกตบอล / วอลเลย์บอล',
+                'location' => 'ศูนย์กีฬาชุมชน อบต.เวียง โซน B', 
+                'capacity' => 20, 
+                'available_equipments' => 'ลูกบาสเกตบอล 3 ลูก, ลูกวอลเลย์บอล 3 ลูก, ตาข่ายวอลเลย์บอล, เสาประดับ', 
+                'rules' => 'จองใช้งานได้ไม่เกิน 2 ชั่วโมงต่อกลุ่ม/วัน เพื่อแบ่งปันให้ชุมชน',
+                'images' => [
+                    'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80'
+                ]
+            ],
+            [
+                'id' => 3, 
+                'facility_name' => 'คอร์ทแบดมินตัน มาตรฐาน 1-2 (Indoor Badminton Courts)', 
+                'category' => 'สนามแบดมินตัน',
+                'location' => 'อาคารศูนย์กีฬาในร่ม (Gymnasium) ชั้น 1', 
+                'capacity' => 8, 
+                'available_equipments' => 'ลูกแบดมินตัน (พลาสติก/ขนไก่), ไม้แบดมินตันสำรอง 4 อัน, พัดลมระบายอากาศ, สกอร์บอร์ด', 
+                'rules' => 'โปรดแต่งกายสุภาพและสวมรองเท้าพื้นยาง (Non-marking) เท่านั้น',
+                'images' => [
+                    'https://images.unsplash.com/photo-1622279457486-62d751e39a3f?auto=format&fit=crop&w=800&q=80'
+                ]
+            ],
+            [
+                'id' => 4, 
+                'facility_name' => 'ลานเปตองชุมชนสัมพันธ์ 1-4 (Petanque Courts)', 
+                'category' => 'ลานเปตอง',
+                'location' => 'บริเวณสวนสาธารณะริมน้ำ อบต.เวียง', 
+                'capacity' => 16, 
+                'available_equipments' => 'ชุดลูกเปตองมาตรฐาน 4 ชุด, คราดปรับพื้นทราย, ป้ายแสดงคะแนน', 
+                'rules' => 'ผู้ยืมอุปกรณ์ต้องนำบัตรประชาชนมาแลกรับที่เจ้าหน้าที่ดูแลลาน',
+                'images' => [
+                    'https://images.unsplash.com/photo-1526848784260-fe5bcf41e8f2?auto=format&fit=crop&w=800&q=80'
+                ]
+            ],
+            [
+                'id' => 5, 
+                'facility_name' => 'สนามตะกร้อ / ลานตะกร้อวง (Sepak Takraw Court)', 
+                'category' => 'สนามตะกร้อ',
+                'location' => 'ศูนย์กีฬาชุมชน อบต.เวียง โซน C', 
+                'capacity' => 10, 
+                'available_equipments' => 'ลูกตะกร้อ 5 ลูก, ตาข่ายตะกร้อ, อัฒจันทร์นั่งชมขนาดเล็ก', 
+                'rules' => 'เปิดให้บริการตั้งแต่เวลา 08.00 น. - 21.00 น.',
+                'images' => [
+                    'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=800&q=80'
+                ]
+            ],
+        ];
+    }
+
+    /**
+     * สร้างการจองสนามกีฬาและยืมอุปกรณ์ (Create Sports Booking)
+     */
+    public static function createSportsBooking(array $data): bool
+    {
+        try {
+            $db = Database::getConnection();
+            $sql = "INSERT INTO sports_bookings (facility_id, user_id, title, sports_date, start_time, end_time, borrow_equipments, user_notes, approval_status, booking_status) 
+                    VALUES (:facility_id, :user_id, :title, :sports_date, :start_time, :end_time, :borrow_equipments, :user_notes, 'pending', 'draft')";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                ':facility_id' => $data['facility_id'],
+                ':user_id' => $data['user_id'] ?? 3,
+                ':title' => $data['title'],
+                ':sports_date' => $data['sports_date'],
+                ':start_time' => $data['start_time'],
+                ':end_time' => $data['end_time'],
+                ':borrow_equipments' => $data['borrow_equipments'] ?? '',
+                ':user_notes' => $data['user_notes'] ?? ''
+            ]);
+            return true;
+        } catch (PDOException $e) {
+            // ในโหมด Mockup จำลองความสำเร็จ
+            return true;
+        }
+    }
+
+    /**
+     * ดึงข้อมูลการจองสนามกีฬาทั้งหมด
+     */
+    public static function getAllSportsBookings(): array
+    {
+        try {
+            $db = Database::getConnection();
+            $sql = "SELECT sb.*, sf.facility_name, sf.category, sf.location, u.full_name, u.email, u.phone, d.department_name 
+                    FROM sports_bookings sb 
+                    JOIN sports_facilities sf ON sb.facility_id = sf.id 
+                    LEFT JOIN users u ON sb.user_id = u.id 
+                    LEFT JOIN departments d ON u.department_id = d.id 
+                    ORDER BY sb.sports_date DESC, sb.start_time DESC";
+            $stmt = $db->query($sql);
+            $bookings = $stmt->fetchAll();
+            if (!empty($bookings)) {
+                return $bookings;
+            }
+        } catch (PDOException $e) {
+            // Fallback mock data
+        }
+
+        return [
+            [
+                'id' => 101,
+                'facility_id' => 1,
+                'facility_name' => 'สนามฟุตบอลหญ้าเทียม อบต.เวียง (Wiang Football Turf)',
+                'category' => 'สนามฟุตบอล / ฟุตซอล',
+                'location' => 'ศูนย์กีฬาชุมชน อบต.เวียง โซน A',
+                'full_name' => 'คุณสมชาย บริหารดี',
+                'department_name' => 'สำนักปลัด (อบต.เวียง)',
+                'phone' => '0812345678',
+                'title' => 'แข่งฟุตบอลกระชับมิตร บุคลากรและผู้นำชุมชน',
+                'sports_date' => '2026-06-28',
+                'start_time' => '17:00',
+                'end_time' => '20:00',
+                'borrow_equipments' => 'ลูกฟุตบอล 5 ลูก, เสื้อเอี๊ยม 20 ตัว, เปิดไฟสปอตไลท์',
+                'user_notes' => 'ขอเจ้าหน้าที่ช่วยเตรียมคูลเลอร์น้ำดื่ม',
+                'approval_status' => 'approved',
+                'created_at' => '2026-06-24 10:30:00'
+            ],
+            [
+                'id' => 102,
+                'facility_id' => 3,
+                'facility_name' => 'คอร์ทแบดมินตัน มาตรฐาน 1-2 (Indoor Badminton Courts)',
+                'category' => 'สนามแบดมินตัน',
+                'location' => 'อาคารศูนย์กีฬาในร่ม (Gymnasium) ชั้น 1',
+                'full_name' => 'คุณสมศรี อนุมัติการ',
+                'department_name' => 'กองคลัง (อบต.เวียง)',
+                'phone' => '0823456789',
+                'title' => 'ออกกำลังกายประจำสัปดาห์ กองคลัง',
+                'sports_date' => '2026-06-29',
+                'start_time' => '18:00',
+                'end_time' => '20:00',
+                'borrow_equipments' => 'ไม้แบดมินตันสำรอง 4 อัน, ลูกแบด 2 หลอด',
+                'user_notes' => '-',
+                'approval_status' => 'pending',
+                'created_at' => '2026-06-25 09:15:00'
+            ],
+            [
+                'id' => 103,
+                'facility_id' => 2,
+                'facility_name' => 'ลานกีฬาอเนกประสงค์ / สนามบาสเกตบอล (Multipurpose Court)',
+                'category' => 'สนามบาสเกตบอล / วอลเลย์บอล',
+                'location' => 'ศูนย์กีฬาชุมชน อบต.เวียง โซน B',
+                'full_name' => 'คุณใจดี พนักงานทั่วไป',
+                'department_name' => 'กองช่าง (อบต.เวียง)',
+                'phone' => '0834567890',
+                'title' => 'ซ้อมวอลเลย์บอลทีม อบต.เวียง',
+                'sports_date' => '2026-06-30',
+                'start_time' => '16:30',
+                'end_time' => '18:30',
+                'borrow_equipments' => 'ลูกวอลเลย์บอล 3 ลูก, ตาข่ายวอลเลย์บอล',
+                'user_notes' => 'ขอยืมกุญแจเปิดตู้เก็บอุปกรณ์',
+                'approval_status' => 'pending',
+                'created_at' => '2026-06-25 11:00:00'
+            ]
+        ];
+    }
 }
