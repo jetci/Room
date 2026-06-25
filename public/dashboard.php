@@ -117,6 +117,9 @@ $userStatus = $currentUser['status'] ?? 'active';
                             <a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
                         </li>
                     <?php endif; ?>
@@ -148,14 +151,37 @@ $userStatus = $currentUser['status'] ?? 'active';
                 <?php endif; ?>
 
                 <!-- System Emergency Announcement Banner -->
-                <div class="alert alert-dismissible fade show d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 20px; border: 1px solid #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); color: #9a3412;" role="alert">
-                    <i class="fa-solid fa-bullhorn fa-2x me-4 text-warning"></i>
-                    <div>
-                        <strong class="fw-bold fs-6">📢 ประกาศส่วนกลาง: งานซ่อมบำรุงระบบไฟฟ้าและระบบปรับอากาศ</strong><br>
-                        <span class="fs-7">ในวันเสาร์ที่ 4 กรกฎาคม 2569 ห้องประชุมสภาใหญ่ (Room A) และห้องประชุมเล็ก (Room B) จะงดให้บริการชั่วคราวเพื่อซ่อมบำรุงประจำปี ขออภัยในความไม่สะดวกมา ณ ที่นี้</span>
+                <?php 
+                    $announcement = $_SESSION['announcement'] ?? [
+                        'is_active' => 1,
+                        'level' => 'warning',
+                        'title' => '📢 ประกาศส่วนกลาง: งานซ่อมบำรุงระบบไฟฟ้าและระบบปรับอากาศ',
+                        'message' => 'ในวันเสาร์ที่ 4 กรกฎาคม 2569 ห้องประชุมสภาใหญ่ (Room A) และห้องประชุมเล็ก (Room B) จะงดให้บริการชั่วคราวเพื่อซ่อมบำรุงประจำปี ขออภัยในความไม่สะดวกมา ณ ที่นี้',
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    if ($announcement['is_active']): 
+                        $bgStyle = 'border: 1px solid #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); color: #9a3412;';
+                        $iconColor = 'text-warning';
+                        if ($announcement['level'] === 'danger') {
+                            $bgStyle = 'border: 1px solid #fecaca; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b;';
+                            $iconColor = 'text-danger';
+                        } elseif ($announcement['level'] === 'info') {
+                            $bgStyle = 'border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #1e40af;';
+                            $iconColor = 'text-primary';
+                        } elseif ($announcement['level'] === 'success') {
+                            $bgStyle = 'border: 1px solid #bbf7d0; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); color: #166534;';
+                            $iconColor = 'text-success';
+                        }
+                ?>
+                    <div class="alert alert-dismissible fade show d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 20px; <?= $bgStyle ?>" role="alert">
+                        <i class="fa-solid fa-bullhorn fa-2x me-4 <?= $iconColor ?>"></i>
+                        <div>
+                            <strong class="fw-bold fs-6"><?= htmlspecialchars($announcement['title']) ?></strong><br>
+                            <span class="fs-7"><?= htmlspecialchars($announcement['message']) ?></span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+                <?php endif; ?>
 
                 <!-- Inactive User Alert Banner -->
                 <?php if ($userStatus === 'inactive'): ?>
