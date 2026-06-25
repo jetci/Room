@@ -147,6 +147,16 @@ $userStatus = $currentUser['status'] ?? 'active';
                     </div>
                 <?php endif; ?>
 
+                <!-- System Emergency Announcement Banner -->
+                <div class="alert alert-dismissible fade show d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 20px; border: 1px solid #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); color: #9a3412;" role="alert">
+                    <i class="fa-solid fa-bullhorn fa-2x me-4 text-warning"></i>
+                    <div>
+                        <strong class="fw-bold fs-6">📢 ประกาศส่วนกลาง: งานซ่อมบำรุงระบบไฟฟ้าและระบบปรับอากาศ</strong><br>
+                        <span class="fs-7">ในวันเสาร์ที่ 4 กรกฎาคม 2569 ห้องประชุมสภาใหญ่ (Room A) และห้องประชุมเล็ก (Room B) จะงดให้บริการชั่วคราวเพื่อซ่อมบำรุงประจำปี ขออภัยในความไม่สะดวกมา ณ ที่นี้</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
                 <!-- Inactive User Alert Banner -->
                 <?php if ($userStatus === 'inactive'): ?>
                     <div class="alert alert-warning d-flex align-items-center p-4 mb-4 shadow-sm" style="border-radius: 20px; border: 1px solid #f59e0b; background-color: #fffbeb; color: #b45309;" role="alert">
@@ -424,6 +434,7 @@ $userStatus = $currentUser['status'] ?? 'active';
                                         <td>8 คน</td>
                                         <td><span class="badge bg-success px-3 py-2 rounded-pill"><i class="fa-solid fa-check me-1"></i> อนุมัติแล้ว</span></td>
                                         <td class="text-end">
+                                            <a href="print_slip.php?id=1012&title=<?= urlencode('หารืองานงบประมาณประจำปี') ?>&date=<?= urlencode('15 มิ.ย. 2569') ?>&time=<?= urlencode('13:00 - 15:00') ?>&attendees=8" class="btn btn-outline-indigo btn-sm px-3 rounded-3 fw-semibold me-1"><i class="fa-solid fa-print me-1"></i> พิมพ์ใบจอง</a>
                                             <button class="btn btn-outline-secondary btn-sm px-3 rounded-3 fw-semibold" disabled>เสร็จสิ้น</button>
                                         </td>
                                     </tr>

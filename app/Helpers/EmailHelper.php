@@ -6,13 +6,6 @@ class EmailHelper
 {
     /**
      * ส่งอีเมลแจ้งเตือนสถานะการจองห้องประชุม (รองรับทั้ง SMTP จริงและ Simulation Mode)
-     *
-     * @param array  $bookingData   ข้อมูลการจอง เช่น title, room_name, meeting_date, start_time, end_time
-     * @param string $status        'approved' หรือ 'rejected'
-     * @param string $recipientEmail อีเมลผู้รับ (ผู้จอง)
-     * @param string $recipientName  ชื่อผู้รับ (ผู้จอง)
-     * @param string $rejectReason   เหตุผลกรณีไม่อนุมัติ
-     * @return bool
      */
     public static function sendBookingStatusEmail(array $bookingData, string $status, string $recipientEmail, string $recipientName, string $rejectReason = ''): bool
     {
@@ -28,7 +21,6 @@ class EmailHelper
 
         $subject = "[อบต.เวียง] แจ้งผลการอนุมัติ: $title ($statusText)";
 
-        // โครงสร้างเนื้อหา HTML Email สวยงามพรีเมียม
         $htmlBody = "
         <div style='font-family: \"Sarabun\", \"Tahoma\", sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;'>
             <div style='text-align: center; margin-bottom: 24px;'>
@@ -94,7 +86,6 @@ class EmailHelper
         </div>
         ";
 
-        // จำลองบันทึกข้อมูลลง Session เพื่อให้แสดงตัวอย่างป๊อปอัปอีเมลในโหมดม็อกอัปได้ทันที
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -105,7 +96,45 @@ class EmailHelper
             'sent_at' => date('Y-m-d H:i:s')
         ];
 
-        // ในอนาคตสามารถใส่สคริปต์ส่งผ่าน Mailgun/Resend API หรือ PHPMailer ได้ที่นี่
+        return true;
+    }
+
+    /**
+     * ส่งข้อความแจ้งเตือนเข้ากลุ่ม LINE อบต.เวียง (LINE Notify Simulation Mode)
+     */
+    public static function sendLineNotify(array $bookingData, string $status, string $recipientName, string $rejectReason = ''): bool
+    {
+        $statusHeader = $status === 'approved' ? '🟢 [อนุมัติการจองห้องประชุม]' : '🔴 [ปฏิเสธ/ไม่อนุมัติการจอง]';
+        $title = $bookingData['title'] ?? 'การประชุมด่วน';
+        $roomName = $bookingData['room_name'] ?? 'ห้องประชุม อบต.เวียง';
+        $meetingDate = $bookingData['meeting_date'] ?? date('Y-m-d');
+        $timeStr = ($bookingData['start_time'] ?? '09:00') . ' - ' . ($bookingData['end_time'] ?? '12:00');
+
+        $message = "$statusHeader\n";
+        $message .= "หัวข้อ: $title\n";
+        $message .= "ห้อง: $roomName\n";
+        $message .= "วันที่: $meetingDate\n";
+        $message .= "เวลา: $timeStr น.\n";
+        $message .= "ผู้จอง: $recipientName\n";
+        
+        if ($status === 'rejected' && !empty($rejectReason)) {
+            $message .= "สาเหตุ: $rejectReason\n";
+        }
+        
+        $message .= "------------------------\n";
+        $message .= "🌐 ตรวจสอบสถานะและจองห้อง: https://github.com/jetci/Room";
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['last_sent_line'] = [
+            'group_name' => 'กลุ่ม LINE แจ้งเตือน อบต.เวียง (245 สมาชิก)',
+            'message' => $message,
+            'sent_at' => date('Y-m-d H:i:s'),
+            'status' => $status
+        ];
+
+        // ในอนาคตสามารถใช้ cURL ยิงเข้า https://notify-api.line.me/api/notify พร้อม Bearer Token ได้ที่นี่
         return true;
     }
 }
