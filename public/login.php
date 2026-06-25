@@ -12,22 +12,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // กรณีเลือก Demo Login
     if ($demoRole === 'admin') {
         $_SESSION['user'] = ['id' => 1, 'full_name' => 'คุณสมชาย บริหารดี (Admin)', 'email' => 'admin@wiang.go.th', 'role_name' => 'Admin', 'role_id' => 1, 'status' => 'active'];
+        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
         header("Location: dashboard.php");
         exit;
     } elseif ($demoRole === 'approver') {
         $_SESSION['user'] = ['id' => 2, 'full_name' => 'คุณสมศรี อนุมัติการ (Approver)', 'email' => 'approver@wiang.go.th', 'role_name' => 'Approver', 'role_id' => 2, 'status' => 'active'];
+        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
         header("Location: dashboard.php");
         exit;
     } elseif ($demoRole === 'user') {
         $_SESSION['user'] = ['id' => 3, 'full_name' => 'คุณใจดี พนักงานทั่วไป (User - Active)', 'email' => 'user@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'active'];
+        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
         header("Location: dashboard.php");
         exit;
     } elseif ($demoRole === 'executive') {
         $_SESSION['user'] = ['id' => 4, 'full_name' => 'ท่านนายก ประเสริฐศักดิ์ (Executive)', 'email' => 'executive@wiang.go.th', 'role_name' => 'Executive', 'role_id' => 4, 'status' => 'active'];
+        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
         header("Location: dashboard.php");
         exit;
     } elseif ($demoRole === 'user_inactive') {
         $_SESSION['user'] = ['id' => 5, 'full_name' => 'คุณรอคอย สมาชิกใหม่ (User - รออนุมัติ)', 'email' => 'waiting@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'inactive'];
+        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
         header("Location: dashboard.php");
         exit;
     }
@@ -51,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'role_name' => $u['role_name'] ?? 'User',
                     'role_id' => $u['role_id'] ?? 3
                 ];
+                setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
                 header("Location: dashboard.php");
                 exit;
             }

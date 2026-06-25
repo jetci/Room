@@ -13,6 +13,15 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// Vercel Serverless Persistence Layer (Restore Session from Cookie)
+if (empty($_SESSION['user']) && !empty($_COOKIE['user_session_payload'])) {
+    $decodedUser = json_decode($_COOKIE['user_session_payload'], true);
+    if (is_array($decodedUser)) {
+        $_SESSION['user'] = $decodedUser;
+    }
+}
+
+
 // Global helper for CSRF token
 if (!function_exists('csrf_token')) {
     function csrf_token() {
