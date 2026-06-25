@@ -12,13 +12,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pass !== $confirmPass) {
         $errorMsg = 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง';
     } else {
+        $lastName = $_POST['last_name'] ?? '';
+        $deptId = (int)($_POST['department_id'] ?? 1);
+        if ($deptId === 7 && !empty($_POST['external_agency_name'])) {
+            $lastName .= ' (หน่วยงาน: ' . trim($_POST['external_agency_name']) . ')';
+        }
+
         $data = [
             'first_name' => $_POST['first_name'] ?? '',
-            'last_name' => $_POST['last_name'] ?? '',
+            'last_name' => $lastName,
             'email' => $_POST['email'] ?? '',
             'phone' => $_POST['phone'] ?? '',
             'password' => $pass,
-            'department_id' => (int)($_POST['department_id'] ?? 1),
+            'department_id' => $deptId,
             'role_id' => 3, // 3 = User (พนักงาน / สมาชิกทั่วไป)
             'status' => 'inactive' // inactive = รอการอนุมัติจาก Approver
         ];
@@ -167,12 +173,20 @@ $departments = Booking::getAllDepartments();
                                     <label class="form-label fw-semibold fs-7">สังกัด / แผนก (Department) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-building text-muted"></i></span>
-                                        <select class="form-select p-3 border-start-0 bg-light" name="department_id" required>
+                                        <select class="form-select p-3 border-start-0 bg-light" name="department_id" id="reg_department_id" required onchange="toggleExternalAgency()">
                                             <option value="" selected disabled>-- กรุณาเลือกสังกัด / แผนก --</option>
                                             <?php foreach ($departments as $d): ?>
                                                 <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['department_name']) ?></option>
                                             <?php endforeach; ?>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-12" id="box_external_agency" style="display: none;">
+                                    <label class="form-label fw-semibold fs-7 text-indigo"><i class="fa-solid fa-flag me-1"></i> ชื่อหน่วยราชการ / องค์กรภายนอก <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-square-pen text-muted"></i></span>
+                                        <input type="text" class="form-control p-3 border-start-0 bg-light" id="input_external_agency" name="external_agency_name" placeholder="ตัวอย่าง: กรมส่งเสริมการปกครองท้องถิ่น / ที่ทำการปกครองอำเภอ">
                                     </div>
                                 </div>
 
@@ -197,6 +211,21 @@ $departments = Booking::getAllDepartments();
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        function toggleExternalAgency() {
+            let select = document.getElementById('reg_department_id');
+            let box = document.getElementById('box_external_agency');
+            let input = document.getElementById('input_external_agency');
+            if (select.value === '7') {
+                box.style.display = 'block';
+                input.setAttribute('required', 'required');
+                input.focus();
+            } else {
+                box.style.display = 'none';
+                input.removeAttribute('required');
+                input.value = '';
+            }
+        }
+
         function checkPasswordMatch() {
             let pass = document.getElementById('reg_password').value;
             let confirm = document.getElementById('reg_confirm_password').value;
