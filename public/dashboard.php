@@ -279,8 +279,18 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                         <td>28 มิ.ย. 2569 (09:00 - 12:00)</td>
                                         <td><span class="badge bg-warning text-dark px-3 py-2 rounded-pill">รออนุมัติ</span></td>
                                         <td class="text-end">
-                                            <a href="approvals.php" class="btn btn-success btn-sm px-3 rounded-3 fw-semibold"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
-                                            <a href="approvals.php" class="btn btn-danger btn-sm px-3 rounded-3 fw-semibold" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="991">
+                                                <input type="hidden" name="action" value="approve">
+                                                <button type="submit" class="btn btn-success btn-sm px-3 rounded-3 fw-semibold"><i class="fa-solid fa-check me-1"></i> อนุมัติ</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="991">
+                                                <input type="hidden" name="action" value="reject">
+                                                <button type="submit" class="btn btn-danger btn-sm px-3 rounded-3 fw-semibold" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
                                         </td>
                                     </tr>
                                     <tr>
@@ -293,8 +303,18 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                         <td>29 มิ.ย. 2569 (13:30 - 16:30)</td>
                                         <td><span class="badge bg-warning text-dark px-3 py-2 rounded-pill">รออนุมัติ</span></td>
                                         <td class="text-end">
-                                            <a href="approvals.php" class="btn btn-success btn-sm px-3 rounded-3 fw-semibold"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
-                                            <a href="approvals.php" class="btn btn-danger btn-sm px-3 rounded-3 fw-semibold" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="992">
+                                                <input type="hidden" name="action" value="approve">
+                                                <button type="submit" class="btn btn-success btn-sm px-3 rounded-3 fw-semibold"><i class="fa-solid fa-check me-1"></i> อนุมัติ</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="992">
+                                                <input type="hidden" name="action" value="reject">
+                                                <button type="submit" class="btn btn-danger btn-sm px-3 rounded-3 fw-semibold" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
                                         </td>
                                     </tr>
                                 </tbody>
