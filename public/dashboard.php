@@ -5,6 +5,11 @@ use App\Models\Booking;
 use App\Middleware\AuthMiddleware;
 
 $currentUser = AuthMiddleware::requireAuth();
+$currentUser = AuthMiddleware::requireRole(['Admin', 'Approver', 'HeadAdmin', 'Executive', 'User']);
+
+$approvalMsg = $_SESSION['approval_msg'] ?? null;
+unset($_SESSION['approval_msg']);
+
 $avatarName = urlencode($currentUser['full_name'] ?? 'User');
 $role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'User';
 $userStatus = $currentUser['status'] ?? 'active';
@@ -50,8 +55,18 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
             <?php include __DIR__ . '/../app/components/sidebar.php'; ?>
 
             <!-- Main Workspace -->
-            <div class="col-lg-10 p-4">
+            <div class="col-lg-10 p-5 workspace-bg">
                 
+                <?php if ($approvalMsg): ?>
+                    <div class="alert alert-success alert-dismissible fade show p-4 mb-4 shadow-sm" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-circle-check fs-3 me-3"></i>
+                            <div><strong class="fw-bold">สำเร็จ!</strong> <?= htmlspecialchars($approvalMsg) ?></div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Alert Messages -->
                 <?php if ($successMsg): ?>
                     <div class="alert alert-success alert-dismissible fade show d-flex align-items-center p-4 mb-4" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
@@ -269,6 +284,7 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <?php if (empty($_SESSION['mock_approved_991'])): ?>
                                     <tr>
                                         <td>
                                             <div class="fw-semibold">คุณมานพ หน่วยงานภายนอก</div>
@@ -293,6 +309,8 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                             </form>
                                         </td>
                                     </tr>
+                                    <?php endif; ?>
+                                    <?php if (empty($_SESSION['mock_approved_992'])): ?>
                                     <tr>
                                         <td>
                                             <div class="fw-semibold">คุณวิภาดา กองช่าง</div>
@@ -317,6 +335,12 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                             </form>
                                         </td>
                                     </tr>
+                                    <?php endif; ?>
+                                    <?php if (!empty($_SESSION['mock_approved_991']) && !empty($_SESSION['mock_approved_992'])): ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">ไม่มีคำขอจองห้องประชุมด่วนในขณะนี้</td>
+                                    </tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>

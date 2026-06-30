@@ -73,9 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         EmailHelper::sendBookingStatusEmail($mockBooking, $statusKey, 'user@wiang.go.th', 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
         EmailHelper::sendLineNotify($mockBooking, $statusKey, 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
         
+        $_SESSION['mock_approved_' . $id] = true;
         $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($id) . " สำเร็จ พร้อมบันทึกฐานข้อมูลและส่งแจ้งเตือนเรียบร้อยแล้ว";
     }
-    header("Location: approvals.php");
+    
+    $redirectUrl = "approvals.php";
+    if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'dashboard.php') !== false) {
+        $redirectUrl = "dashboard.php";
+    }
+    header("Location: " . $redirectUrl);
     exit;
 }
 
