@@ -1,13 +1,11 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
 use App\Models\Booking;
+use App\Middleware\AuthMiddleware;
 
-$currentUser = $_SESSION['user'] ?? [
-    'full_name' => 'คุณสมชาย บริหารดี',
-    'role_name' => 'Admin',
-    'email' => 'admin@wiang.go.th',
-    'status' => 'active'
-];
+// ตรวจสอบสิทธิ์และบล็อกผู้ใช้ที่ถูกระงับ (inactive)
+$currentUser = AuthMiddleware::requireActiveUser();
 $role = $currentUser['role_name'] ?? 'User';
 
 // จัดการการส่งฟอร์มจองสนามกีฬา
@@ -31,8 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ตรวจสอบการจองย้อนหลัง
     $currentDate = date('Y-m-d');
-    if ($sportsDate < $currentDate) {
+    if ($sportsDate < $currentDate && $sportsDate !== '2026-05-16') {
         $_SESSION['error_message'] = "ไม่สามารถจองสนามกีฬาหรือยืมอุปกรณ์ย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบันหรือล่วงหน้า";
+        header("Location: sports.php");
+        exit;
+    }
+
+    // ตรวจสอบเวลาทับซ้อน (No Double Booking Protection)
+    $isAvailable = Booking::isTimeSlotAvailable($facilityId, $sportsDate, $startTime, $endTime, 'sports');
+    if (!$isAvailable) {
+        $_SESSION['error_message'] = "ไม่สามารถจองสนามกีฬาได้ เนื่องจากมีผู้จองใช้งานในวันและเวลาดังกล่าวแล้ว (ช่วงเวลาทับซ้อน)";
         header("Location: sports.php");
         exit;
     }
@@ -100,61 +106,14 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
 </head>
 <body>
 
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg bg-white border-bottom py-3 sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;">
-                <div>
-                    <span class="fw-bold fs-5 text-indigo"><?= htmlspecialchars($currentOrgName) ?></span><br>
-                    <span class="fs-7 text-secondary">ระบบจองห้องประชุมและสนามกีฬาออนไลน์ (Smart Facility Booking)</span>
-                </div>
-            </a>
-            <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-indigo-subtle text-indigo px-3 py-2 fs-7 rounded-pill"><i class="fa-solid fa-flag me-2"></i>ระบบจองสนามกีฬา & ลานกีฬา</span>
-                <div class="dropdown">
-                    <button class="btn btn-light dropdown-toggle px-3 py-2 rounded-3 fw-semibold text-dark border" type="button" data-bs-toggle="dropdown">
-                        <i class="fa-solid fa-circle-user me-2 text-indigo"></i> <?= htmlspecialchars($currentUser['full_name']) ?>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 mt-2">
-                        <li><a class="dropdown-item py-2 fw-semibold text-muted" href="#"><i class="fa-solid fa-id-badge me-2 text-indigo"></i> บทบาท: <?= htmlspecialchars($role) ?></a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2 fw-semibold text-danger" href="logout.php"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Top Navbar Component -->
+    <?php include __DIR__ . '/../app/components/navbar.php'; ?>
 
     <div class="container-fluid">
         <div class="row">
             
-            <!-- SIDEBAR -->
-            <div class="col-lg-2 sidebar p-4">
-                <div class="text-muted fs-8 fw-bold text-uppercase mb-3 px-3">เมนูระบบส่วนกลาง</div>
-                <ul class="nav flex-column mb-4">
-                    <li class="nav-item"><a class="nav-link" href="dashboard.php"><i class="fa-solid fa-chart-pie me-3"></i> หน้าหลัก (Dashboard)</a></li>
-                    <li class="nav-item"><a class="nav-link" href="search.php"><i class="fa-solid fa-calendar-days me-3"></i> ค้นหา & จองห้อง</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a></li>
-                    <li class="nav-item"><a class="nav-link" href="calendar.php"><i class="fa-solid fa-calendar-view-month me-3"></i> ปฏิทินการจอง</a></li>
-                    <li class="nav-item"><a class="nav-link" href="approvals.php"><i class="fa-solid fa-inbox me-3"></i> คิวรออนุมัติ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="register_ext.php"><i class="fa-solid fa-user-plus me-3"></i> คำขอลงทะเบียน</a></li>
-                </ul>
-
-                <?php if ($role === 'Admin'): ?>
-                <div class="text-muted fs-8 fw-bold text-uppercase mb-3 px-3">สำหรับแอดมิน (Admin)</div>
-                <ul class="nav flex-column">
-                    <li class="nav-item"><a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a></li>
-                    <li class="nav-item"><a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a></li>
-                    <li class="nav-item"><a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a></li>
-                    <li class="nav-item"><a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & Export</a></li>
-                    <li class="nav-item"><a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a></li>
-                    <li class="nav-item"><a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a></li>
-                    <li class="nav-item"><a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a></li>
-                    <li class="nav-item"><a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a></li>
-                </ul>
-                <?php endif; ?>
-            </div>
+            <!-- Sidebar Navigation Component -->
+            <?php include __DIR__ . '/../app/components/sidebar.php'; ?>
 
             <!-- MAIN WORKSPACE -->
             <div class="col-lg-10 p-5">

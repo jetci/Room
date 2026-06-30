@@ -1,14 +1,11 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
 use App\Models\Booking;
+use App\Middleware\AuthMiddleware;
 
-$currentUser = $_SESSION['user'] ?? [
-    'full_name' => 'คุณสมชาย บริหารดี',
-    'role_name' => 'Admin',
-    'email' => 'admin@wiang.go.th',
-    'status' => 'active'
-];
-$role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'Admin';
+$currentUser = AuthMiddleware::requireAdmin();
+$role = $currentUser['role_name'] ?? 'Admin';
 $userStatus = $currentUser['status'] ?? 'active';
 $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
 
@@ -305,12 +302,12 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                         <!-- 🔑 รหัสผ่าน & ยืนยันรหัสผ่าน -->
                         <div class="col-md-12">
                             <label class="form-label fw-semibold">ตั้งรหัสผ่าน (Password) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control p-3 bg-light text-indigo fw-bold" id="admin_reg_password" name="password" value="123456" required>
-                            <div class="form-text text-muted fs-7">ระบบจะตั้งรหัสผ่านเริ่มต้นเป็น '123456'</div>
+                            <input type="password" class="form-control p-3 bg-light text-indigo fw-bold" id="admin_reg_password" name="password" required placeholder="ป้อนรหัสผ่านชั่วคราว">
+                            <div class="form-text text-muted fs-7">กรุณากำหนดรหัสผ่านเริ่มต้นที่ปลอดภัย (แนะนำความยาวอย่างน้อย 8 ตัวอักษร)</div>
                         </div>
                         <div class="col-md-12">
                             <label class="form-label fw-semibold">ยืนยันรหัสผ่าน (Confirm Password) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control p-3 bg-light text-indigo fw-bold" id="admin_reg_confirm_password" name="confirm_password" value="123456" required>
+                            <input type="password" class="form-control p-3 bg-light text-indigo fw-bold" id="admin_reg_confirm_password" name="confirm_password" required placeholder="ยืนยันรหัสผ่านชั่วคราว">
                             <div class="form-text text-muted fs-7">ยืนยันรหัสผ่านอีกครั้งเพื่อป้องกันการพิมพ์ผิดพลาด</div>
                         </div>
 

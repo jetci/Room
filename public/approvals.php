@@ -1,22 +1,66 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
 use App\Models\Booking;
 use App\Helpers\EmailHelper;
+use App\Middleware\AuthMiddleware;
+
+// ตรวจสอบสิทธิ์การเข้าถึง (อนุญาต Admin, Approver, HeadAdmin, Executive)
+$currentUser = AuthMiddleware::requireRole(['Admin', 'Approver', 'HeadAdmin', 'Executive']);
+$role = $currentUser['role_name'] ?? 'Admin';
+$userStatus = $currentUser['status'] ?? 'active';
+$avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
+
 $rooms = Booking::getAllRooms();
 
-// จัดการกดอนุมัติ/ปฏิเสธ ทั้งการจองห้องและบัญชีสมาชิก
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    if ($_GET['action'] === 'approve_user') {
+// จัดการกดอนุมัติ/ปฏิเสธ (เปลี่ยนจาก GET เป็น POST พร้อมตรวจ CSRF)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['id'])) {
+    // ป้องกันสิทธิ์ Executive ทำรายการ (View Only Enforce)
+    if ($role === 'Executive') {
+        $_SESSION['error_message'] = "ผู้บริหาร (Executive) มีสิทธิ์ดูข้อมูลเท่านั้น ไม่สามารถทำรายการอนุมัติได้";
+        header("Location: approvals.php");
+        exit;
+    }
+
+    // ตรวจสอบ CSRF Token
+    if (!isset($_POST['_token']) || $_POST['_token'] !== csrf_token()) {
+        $_SESSION['error_message'] = "คำขอไม่ถูกต้อง (CSRF Token Mismatch)";
+        header("Location: approvals.php");
+        exit;
+    }
+
+    $id = (int)$_POST['id'];
+    $action = $_POST['action'];
+    $approverFullName = $currentUser['full_name'] ?? 'Approver';
+
+    if ($action === 'approve_user') {
         Booking::toggleUserStatus($id, 'active');
         $_SESSION['approval_msg'] = "อนุมัติเปิดใช้งานบัญชีผู้ใช้ ID: $id สำเร็จเรียบร้อย";
-    } elseif ($_GET['action'] === 'reject_user') {
+    } elseif ($action === 'reject_user') {
         Booking::deleteUser($id);
         $_SESSION['approval_msg'] = "ปฏิเสธและลบคำขอสมัครสมาชิก ID: $id เรียบร้อย";
-    } elseif (in_array($_GET['action'], ['approve', 'reject'])) {
-        $act = $_GET['action'] === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
-        $statusKey = $_GET['action'] === 'approve' ? 'approved' : 'rejected';
+    } elseif ($action === 'verify_step1') {
+        Booking::verifyBookingStep1($id, $approverFullName, 'room');
+        $_SESSION['approval_msg'] = "ขั้นตอนที่ 1: เจ้าหน้าที่ผู้ดูแล ($approverFullName) ทำการตรวจสอบผ่านคำร้องจองห้องประชุม ID: #{$id} และส่งต่อให้หัวหน้าสำนักปลัดเรียบร้อย";
+    } elseif ($action === 'approve_final') {
+        Booking::approveBookingFinal($id, $approverFullName, 'room');
+        $_SESSION['approval_msg'] = "ขั้นตอนที่ 2: หัวหน้าสำนักปลัด ($approverFullName) ทำการยืนยันขั้นสุดท้ายคำร้อง ID: #{$id} พร้อมประทับลายเซ็นอิเล็กทรอนิกส์ (e-Signature) สำเร็จ";
+    } elseif ($action === 'verify_sports_step1') {
+        Booking::verifyBookingStep1($id, $approverFullName, 'sports');
+        $_SESSION['approval_msg'] = "ขั้นตอนที่ 1: เจ้าหน้าที่ผู้ดูแล ($approverFullName) ตรวจสอบผ่านคำร้องจองสนามกีฬา/อุปกรณ์ ID: #SP-{$id} และส่งต่อให้หัวหน้าสำนักปลัดเรียบร้อย";
+    } elseif ($action === 'approve_sports_final') {
+        Booking::approveBookingFinal($id, $approverFullName, 'sports');
+        $_SESSION['approval_msg'] = "ขั้นตอนที่ 2: หัวหน้าสำนักปลัด ($approverFullName) ยืนยันขั้นสุดท้ายคำร้องสนามกีฬา ID: #SP-{$id} พร้อมประทับลายเซ็นอิเล็กทรอนิกส์ (e-Signature) สำเร็จ";
+    } elseif (in_array($action, ['approve_sports', 'reject_sports'])) {
+        $act = $action === 'approve_sports' ? 'อนุมัติ' : 'ปฏิเสธ';
+        $_SESSION['approval_msg'] = "ทำรายการ $act คำร้องขอเข้าใช้บริการสนามกีฬาและเบิกยืมอุปกรณ์กีฬา (ID: #SP-{$id}) เรียบร้อยแล้ว";
+    } elseif (in_array($action, ['approve', 'reject'])) {
+        $act = $action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
+        $statusKey = $action === 'approve' ? 'approved' : 'rejected';
         
+        // อัปเดตสถานะลง Database จริง
+        Booking::updateBookingStatus($id, $statusKey, $approverFullName);
+
         // ข้อมูลจำลองการจองสำหรับส่งอีเมล
         $mockBooking = [
             'title' => 'ประชุมจัดทำแผนงบประมาณประจำปี 2569 (อบต.เวียง)',
@@ -29,7 +73,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         EmailHelper::sendBookingStatusEmail($mockBooking, $statusKey, 'user@wiang.go.th', 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
         EmailHelper::sendLineNotify($mockBooking, $statusKey, 'คุณใจดี พนักงานทั่วไป', 'ห้องประชุมมีการใช้งานด่วนจากผู้บริหารในวันดังกล่าว');
         
-        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($_GET['id']) . " สำเร็จ พร้อมส่งอีเมลและข้อความ LINE Notify แจ้งเตือนเรียบร้อยแล้ว";
+        $_SESSION['approval_msg'] = "ทำรายการ $act การจอง ID: " . htmlspecialchars($id) . " สำเร็จ พร้อมบันทึกฐานข้อมูลและส่งแจ้งเตือนเรียบร้อยแล้ว";
     }
     header("Location: approvals.php");
     exit;
@@ -43,16 +87,6 @@ $lastSentLine = $_SESSION['last_sent_line'] ?? null;
 $allUsers = Booking::getAllUsers();
 $pendingUsers = array_filter($allUsers, fn($u) => $u['status'] === 'inactive');
 
-$currentUser = $_SESSION['user'] ?? [
-    'full_name' => 'คุณสมชาย บริหารดี',
-    'role_name' => 'Admin',
-    'email' => 'admin@wiang.go.th',
-    'status' => 'active'
-];
-$role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'Admin';
-$userStatus = $currentUser['status'] ?? 'active';
-$avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
-
 $currentLogo = $_SESSION['org_logo'] ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Garuda_of_Thailand_%28Government_Gazette%29.svg/180px-Garuda_of_Thailand_%28Government_Gazette%29.svg.png';
 $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหารส่วนตำบลเวียง';
 ?>
@@ -61,120 +95,36 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คิวรออนุมัติ (Approver) - Smart Room Booking</title>
+    <title>คิวรออนุมัติ (Approver Queue) - <?= htmlspecialchars($currentOrgName) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/index.css">
     <!-- Flatpickr CSS & JS CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .sidebar { min-height: calc(100vh - 84px); background-color: #ffffff; border-right: 1px solid #e2e8f0; }
+        .nav-link { font-weight: 600; color: #64748b; padding: 14px 24px; border-radius: 12px; margin-bottom: 6px; transition: all 0.3s ease; }
+        .nav-link:hover, .nav-link.active { background-color: #f1f5f9; color: #4338ca; }
+        .nav-link.active { background-color: #e0e7ff; color: #4338ca; border-left: 5px solid #4338ca; }
+    </style>
 </head>
 <body>
 
-    <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center" href="dashboard.php">
-                <img src="<?= $currentLogo ?>" alt="Logo" class="me-3 rounded-circle shadow-sm" style="width: 44px; height: 44px; object-fit: cover; border: 2px solid #cbd5e1;"> 
-                <span class="fw-bold">SMART ROOM BOOKING (<?= htmlspecialchars($currentOrgName) ?>)</span>
-            </a>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-light position-relative me-3 border-0" style="background: #f1f5f9; border-radius: 12px; width: 44px; height: 44px;">
-                    <i class="fa-regular fa-bell fs-5"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?= count($pendingUsers) + 2 ?></span>
-                </button>
-                <div class="d-flex align-items-center me-3">
-                    <img src="https://ui-avatars.com/api/?name=<?= $avatarName ?>&background=10b981&color=fff" class="rounded-circle me-2" width="44" height="44">
-                    <div class="d-none d-md-block">
-                        <div class="fw-semibold fs-6 lh-1"><?= htmlspecialchars($currentUser['full_name']) ?></div>
-                        <span class="badge bg-green-light mt-1"><?= htmlspecialchars($role) ?></span>
-                    </div>
-                </div>
-                <a href="logout.php" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-semibold">
-                    <i class="fa-solid fa-right-from-bracket me-1"></i> ออกจากระบบ
-                </a>
-            </div>
-        </div>
-    </nav>
+    <!-- Top Navbar Component -->
+    <?php include __DIR__ . '/../app/components/navbar.php'; ?>
 
     <!-- Main Content Layout -->
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar Navigation -->
-            <div class="col-lg-2 d-none d-lg-block sidebar py-4 px-3">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.php"><i class="fa-solid fa-chart-pie me-3"></i> แดชบอร์ด</a>
-                    </li>
-                    <li class="nav-item">
-                        <?php if ($userStatus === 'inactive'): ?>
-                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-calendar-days me-3 text-secondary"></i> ปฏิทินการจอง <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
-                        <?php else: ?>
-                            <a class="nav-link" href="calendar.php"><i class="fa-solid fa-calendar-days me-3"></i> ปฏิทินการจอง</a>
-                        <?php endif; ?>
-                    </li>
-                    <li class="nav-item">
-                        <?php if ($userStatus === 'inactive'): ?>
-                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-magnifying-glass me-3 text-secondary"></i> ค้นหาห้องว่าง <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
-                        <?php else: ?>
-                            <a class="nav-link" href="search.php"><i class="fa-solid fa-magnifying-glass me-3"></i> ค้นหาห้องว่าง</a>
-                        <?php endif; ?>
-                    </li>
-                    <li class="nav-item">
-                        <?php if ($userStatus === 'inactive'): ?>
-                            <a class="nav-link text-muted" href="#" onclick="alert('บัญชีของคุณอยู่ระหว่างรอการอนุมัติ ไม่สามารถใช้งานเมนูจองได้ในขณะนี้'); return false;"><i class="fa-solid fa-futbol me-3 text-secondary"></i> จองสนามกีฬา & อุปกรณ์ <i class="fa-solid fa-lock ms-2 text-warning"></i></a>
-                        <?php else: ?>
-                            <a class="nav-link" href="sports.php"><i class="fa-solid fa-futbol me-3"></i> จองสนามกีฬา & อุปกรณ์</a>
-                        <?php endif; ?>
-                    </li>
-
-                    <?php if ($role === 'Admin' || $role === 'Approver' || $role === 'Executive'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="approvals.php"><i class="fa-solid fa-user-clock me-3"></i> คิวรออนุมัติ <span class="badge bg-warning text-dark ms-2"><?= count($pendingUsers) + 2 ?></span></a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if ($role === 'Executive'): ?>
-                        <li class="nav-item mt-4 mb-2"><span class="text-muted fs-7 fw-bold px-3">สำหรับผู้บริหาร (EXECUTIVE)</span></li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & สถิติภาพรวม</a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if ($role === 'Admin'): ?>
-                        <li class="nav-item mt-4 mb-2"><span class="text-muted fs-7 fw-bold px-3">จัดการระบบ (ADMIN)</span></li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_rooms.php"><i class="fa-solid fa-door-open me-3"></i> จัดการห้องประชุม</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_sports.php"><i class="fa-solid fa-trophy me-3"></i> จัดการสนามกีฬา</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_equipments.php"><i class="fa-solid fa-couch me-3"></i> จัดการอุปกรณ์</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="reports.php"><i class="fa-solid fa-file-invoice-dollar me-3"></i> รายงาน & Export</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_users.php"><i class="fa-solid fa-users-gear me-3"></i> จัดการผู้ใช้</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_announcements.php"><i class="fa-solid fa-bullhorn me-3"></i> ประกาศส่วนกลาง</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_settings.php"><i class="fa-solid fa-house-flag me-3"></i> ตั้งค่าข้อมูล & โลโก้</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="audit_logs.php"><i class="fa-solid fa-shield-halved me-3"></i> Audit Logs</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
+            <!-- Sidebar Navigation Component -->
+            <?php include __DIR__ . '/../app/components/sidebar.php'; ?>
 
             <!-- Main Workspace -->
-            <div class="col-lg-10 p-4">
+            <div class="col-lg-10 p-5">
                 
                 <?php if ($approvalMsg): ?>
                     <div class="alert alert-success alert-dismissible fade show d-flex align-items-center justify-content-between p-4 mb-4 shadow-sm" style="border-radius: 16px; border: none; background-color: #dcfce7; color: #15803d;" role="alert">
@@ -304,12 +254,22 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                                 <td class="text-muted fs-7"><?= date('d/m/') . (date('Y') + 543) ?></td>
                                                 <td><span class="badge bg-yellow-light text-warning px-3 py-2 fs-7 fw-bold"><i class="fa-solid fa-hourglass-half me-1"></i> รออนุมัติ (Pending)</span></td>
                                                 <td class="text-end px-3">
-                                                    <a href="approvals.php?action=approve_user&id=<?= $u['id'] ?>" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะอนุมัติเปิดใช้งานบัญชีนี้ใช่หรือไม่?');">
-                                                        <i class="fa-solid fa-user-check me-1"></i> อนุมัติ (Approve)
-                                                    </a>
-                                                    <a href="approvals.php?action=reject_user&id=<?= $u['id'] ?>" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณต้องการปฏิเสธและลบคำขอสมัครนี้ใช่หรือไม่?');">
-                                                        <i class="fa-solid fa-user-xmark me-1"></i> ปฏิเสธ (Reject)
-                                                    </a>
+                                                    <form method="POST" action="approvals.php" class="d-inline">
+                                                        <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                        <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                                        <input type="hidden" name="action" value="approve_user">
+                                                        <button type="submit" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะอนุมัติเปิดใช้งานบัญชีนี้ใช่หรือไม่?');">
+                                                            <i class="fa-solid fa-user-check me-1"></i> อนุมัติ (Approve)
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="approvals.php" class="d-inline">
+                                                        <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                        <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                                        <input type="hidden" name="action" value="reject_user">
+                                                        <button type="submit" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณต้องการปฏิเสธและลบคำขอสมัครนี้ใช่หรือไม่?');">
+                                                            <i class="fa-solid fa-user-xmark me-1"></i> ปฏิเสธ (Reject)
+                                                        </button>
+                                                    </form>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -362,13 +322,23 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                     <td class="fw-semibold">อัปเดตงานทีม Design & UX/UI</td>
                                     <td>Room C - Creative Space</td>
                                     <td><?= date('d/m/', strtotime('+1 day')) . (date('Y', strtotime('+1 day')) + 543) ?> (10:00 - 12:00)</td>
-                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold">รออนุมัติ (Pending)</span></td>
+                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold text-warning">รอตรวจสอบขั้นต้น (Pending Step 1)</span></td>
                                     <td class="text-end px-3">
                                         <?php if ($role === 'Executive'): ?>
                                             <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
                                         <?php else: ?>
-                                            <a href="approvals.php?action=approve&id=3" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
-                                            <a href="approvals.php?action=reject&id=3" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="3">
+                                                <input type="hidden" name="action" value="verify_step1">
+                                                <button type="submit" class="btn btn-warning btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm text-dark"><i class="fa-solid fa-user-check me-1"></i> ตรวจสอบผ่าน (ขั้น 1)</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="3">
+                                                <input type="hidden" name="action" value="reject">
+                                                <button type="submit" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -380,14 +350,141 @@ $currentOrgName = $_SESSION['org_name'] ?? 'องค์การบริหา
                                     <td class="fw-semibold">ทดสอบระบบงานโปรแกรมเมอร์</td>
                                     <td>Room D - Smart Pod 1</td>
                                     <td><?= date('d/m/', strtotime('+2 days')) . (date('Y', strtotime('+2 days')) + 543) ?> (14:00 - 16:00)</td>
-                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold">รออนุมัติ (Pending)</span></td>
+                                    <td><span class="badge bg-info text-white px-3 py-2 fw-bold"><i class="fa-solid fa-user-shield me-1"></i> ตรวจสอบผ่านแล้ว (รอหัวหน้าสำนักปลัด)</span></td>
                                     <td class="text-end px-3">
                                         <?php if ($role === 'Executive'): ?>
                                             <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
                                         <?php else: ?>
-                                            <a href="approvals.php?action=approve&id=5" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-check me-1"></i> อนุมัติ</a>
-                                            <a href="approvals.php?action=reject&id=5" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</a>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="5">
+                                                <input type="hidden" name="action" value="approve_final">
+                                                <button type="submit" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-signature me-1"></i> ยืนยันขั้นสุดท้าย (e-Signature)</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="5">
+                                                <input type="hidden" name="action" value="reject">
+                                                <button type="submit" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำขอจองห้องประชุมนี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
                                         <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณวิชุดา งานดี</div>
+                                        <span class="text-muted fs-7">ฝ่ายนโยบายและแผน</span>
+                                    </td>
+                                    <td class="fw-semibold">ประชุมผู้เชี่ยวชาญชุมชน</td>
+                                    <td>Room B - Boardroom VIP</td>
+                                    <td><?= date('d/m/', strtotime('+4 days')) . (date('Y', strtotime('+4 days')) + 543) ?> (09:00 - 12:00)</td>
+                                    <td><span class="badge bg-success text-white px-3 py-2 fw-bold"><i class="fa-solid fa-circle-check me-1"></i> อนุมัติสำเร็จ (e-Signed)</span></td>
+                                    <td class="text-end px-3">
+                                        <a href="print_booking.php?id=7&type=room" target="_blank" class="btn btn-outline-primary btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm">
+                                            <i class="fa-solid fa-print me-1"></i> พิมพ์ใบขอใช้สถานที่ (e-Signature)
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: คิวรออนุมัติการจองสนามกีฬา & ขอยืมอุปกรณ์กีฬา -->
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-success"><i class="fa-solid fa-futbol me-2"></i> คิวรออนุมัติการจองสนามกีฬา & ขอยืมอุปกรณ์กีฬา (Sports Approvals)</h4>
+                        <p class="text-muted mb-0">หน้าต่างสำหรับพิจารณาอนุมัติการใช้บริการสนามกีฬา ลานกีฬาอเนกประสงค์ และเบิกยืมอุปกรณ์กีฬา</p>
+                    </div>
+                    <a href="sports.php" class="btn btn-success px-4 py-3 rounded-3 fw-semibold shadow-sm">
+                        <i class="fa-solid fa-plus me-2"></i> จองสนามกีฬาใหม่
+                    </a>
+                </div>
+
+                <!-- Sports Approval Queue Table Card -->
+                <div class="card main-card bg-white p-4 mb-5 shadow-sm" style="border-radius: 24px;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="py-3 px-3">ผู้จอง / เบิกยืม</th>
+                                    <th scope="col" class="py-3">สนามกีฬา / สถานที่</th>
+                                    <th scope="col" class="py-3">รายการอุปกรณ์ที่ยืม (Equipments)</th>
+                                    <th scope="col" class="py-3">วัน-เวลาที่ขอใช้</th>
+                                    <th scope="col" class="py-3">สถานะ</th>
+                                    <th scope="col" class="py-3 text-end px-3">จัดการ (Action)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณวิชาญ นักกีฬาดี</div>
+                                        <span class="text-muted fs-7">ฝ่ายพัฒนาชุมชน</span>
+                                    </td>
+                                    <td class="fw-semibold text-dark">สนามฟุตบอลหญ้าเทียม อบต.เวียง</td>
+                                    <td><span class="badge bg-light text-secondary border px-3 py-2 fs-7">ลูกฟุตบอล 2 ลูก, เสื้อเอี๊ยม 10 ตัว</span></td>
+                                    <td><?= date('d/m/', strtotime('+1 day')) . (date('Y', strtotime('+1 day')) + 543) ?> (17:00 - 19:00)</td>
+                                    <td><span class="badge bg-yellow-light px-3 py-2 fw-bold text-warning">รอตรวจสอบขั้นต้น (Pending Step 1)</span></td>
+                                    <td class="text-end px-3">
+                                        <?php if ($role === 'Executive'): ?>
+                                            <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
+                                        <?php else: ?>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="101">
+                                                <input type="hidden" name="action" value="verify_sports_step1">
+                                                <button type="submit" class="btn btn-warning btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm text-dark"><i class="fa-solid fa-user-check me-1"></i> ตรวจสอบผ่าน (ขั้น 1)</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="101">
+                                                <input type="hidden" name="action" value="reject_sports">
+                                                <button type="submit" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำร้องขอจองสนามกีฬาและเบิกยืมอุปกรณ์นี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณนารี สุขสันต์</div>
+                                        <span class="text-muted fs-7">ฝ่ายสวัสดิการสังคม</span>
+                                    </td>
+                                    <td class="fw-semibold text-dark">คอร์ทแบดมินตัน มาตรฐาน 1-2</td>
+                                    <td><span class="badge bg-light text-secondary border px-3 py-2 fs-7">ไม่ยืมอุปกรณ์ (นำมาเอง)</span></td>
+                                    <td><?= date('d/m/', strtotime('+3 days')) . (date('Y', strtotime('+3 days')) + 543) ?> (18:00 - 20:00)</td>
+                                    <td><span class="badge bg-info text-white px-3 py-2 fw-bold"><i class="fa-solid fa-user-shield me-1"></i> ตรวจสอบผ่านแล้ว (รอหัวหน้าสำนักปลัด)</span></td>
+                                    <td class="text-end px-3">
+                                        <?php if ($role === 'Executive'): ?>
+                                            <span class="badge bg-light text-secondary px-3 py-2 fs-7 fw-semibold"><i class="fa-solid fa-eye me-1"></i> สิทธิ์ดูข้อมูล (View Only)</span>
+                                        <?php else: ?>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="102">
+                                                <input type="hidden" name="action" value="approve_sports_final">
+                                                <button type="submit" class="btn btn-success btn-sm px-4 py-2 rounded-3 me-1 fw-semibold shadow-sm"><i class="fa-solid fa-signature me-1"></i> ยืนยันขั้นสุดท้าย (e-Signature)</button>
+                                            </form>
+                                            <form method="POST" action="approvals.php" class="d-inline">
+                                                <input type="hidden" name="_token" value="<?= csrf_token() ?>">
+                                                <input type="hidden" name="id" value="102">
+                                                <input type="hidden" name="action" value="reject_sports">
+                                                <button type="submit" class="btn btn-danger btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm" onclick="return confirm('คุณยืนยันที่จะปฏิเสธคำร้องขอจองสนามกีฬาและเบิกยืมอุปกรณ์นี้ใช่หรือไม่?');"><i class="fa-solid fa-xmark me-1"></i> ปฏิเสธ</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3">
+                                        <div class="fw-bold">คุณกนก บริการรวดเร็ว</div>
+                                        <span class="text-muted fs-7">ฝ่ายบริหารงานทั่วไป</span>
+                                    </td>
+                                    <td class="fw-semibold text-dark">สนามฟุตซอลอเนกประสงค์ ในร่ม</td>
+                                    <td><span class="badge bg-light text-secondary border px-3 py-2 fs-7">ลูกฟุตซอล 2 ลูก, นกหวีด 1 อัน</span></td>
+                                    <td><?= date('d/m/', strtotime('+5 days')) . (date('Y', strtotime('+5 days')) + 543) ?> (16:00 - 18:00)</td>
+                                    <td><span class="badge bg-success text-white px-3 py-2 fw-bold"><i class="fa-solid fa-circle-check me-1"></i> อนุมัติสำเร็จ (e-Signed)</span></td>
+                                    <td class="text-end px-3">
+                                        <a href="print_booking.php?id=103&type=sports" target="_blank" class="btn btn-outline-primary btn-sm px-4 py-2 rounded-3 fw-semibold shadow-sm">
+                                            <i class="fa-solid fa-print me-1"></i> พิมพ์ใบขอใช้สถานที่ (e-Signature)
+                                        </a>
                                     </td>
                                 </tr>
                             </tbody>

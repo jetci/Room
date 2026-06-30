@@ -3,69 +3,72 @@ require_once __DIR__ . '/../routes/web.php';
 use App\Models\Booking;
 
 $errorMsg = '';
+$isProduction = (getenv('APP_ENV') === 'production' || ($_ENV['APP_ENV'] ?? '') === 'production');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     $demoRole = $_POST['demo_role'] ?? '';
 
-    // กรณีเลือก Demo Login
-    if ($demoRole === 'admin') {
-        $_SESSION['user'] = ['id' => 1, 'full_name' => 'คุณสมชาย บริหารดี (Admin)', 'email' => 'admin@wiang.go.th', 'role_name' => 'Admin', 'role_id' => 1, 'status' => 'active'];
-        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
-        header("Location: dashboard.php?sync_role=admin");
-        exit;
-    } elseif ($demoRole === 'approver') {
-        $_SESSION['user'] = ['id' => 2, 'full_name' => 'คุณสมศรี อนุมัติการ (Approver)', 'email' => 'approver@wiang.go.th', 'role_name' => 'Approver', 'role_id' => 2, 'status' => 'active'];
-        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
-        header("Location: dashboard.php?sync_role=approver");
-        exit;
-    } elseif ($demoRole === 'user') {
-        $_SESSION['user'] = ['id' => 3, 'full_name' => 'คุณใจดี พนักงานทั่วไป (User - Active)', 'email' => 'user@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'active'];
-        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
-        header("Location: dashboard.php?sync_role=user");
-        exit;
-    } elseif ($demoRole === 'executive') {
-        $_SESSION['user'] = ['id' => 4, 'full_name' => 'ท่านนายก ประเสริฐศักดิ์ (Executive)', 'email' => 'executive@wiang.go.th', 'role_name' => 'Executive', 'role_id' => 4, 'status' => 'active'];
-        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
-        header("Location: dashboard.php?sync_role=executive");
-        exit;
-    } elseif ($demoRole === 'user_inactive') {
-        $_SESSION['user'] = ['id' => 5, 'full_name' => 'คุณรอคอย สมาชิกใหม่ (User - รออนุมัติ)', 'email' => 'waiting@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'inactive'];
-        setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
-        header("Location: dashboard.php?sync_role=user_inactive");
-        exit;
-    }
-
-    // กรณีล็อกอินด้วยอีเมลและรหัสผ่านจริง
-    $users = Booking::getAllUsers();
-    $found = false;
-    foreach ($users as $u) {
-        if ($u['email'] === $email) {
-            $found = true;
-            if ($u['status'] === 'inactive') {
-                $errorMsg = 'บัญชีของคุณอยู่ระหว่าง "รอการอนุมัติจาก Approver" (ยังไม่เปิดใช้งาน)';
-            } elseif ($u['status'] === 'suspended') {
-                $errorMsg = 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ';
-            } else {
-                // สมมติว่าผ่าน (หรือเช็ค hash)
-                $_SESSION['user'] = [
-                    'id' => $u['id'], 
-                    'full_name' => $u['full_name'], 
-                    'email' => $u['email'], 
-                    'role_name' => $u['role_name'] ?? 'User',
-                    'role_id' => $u['role_id'] ?? 3
-                ];
-                setcookie('user_session_payload', json_encode($_SESSION['user']), time() + 86400, '/');
+    // กรณีเลือก Demo Login (ห้ามใช้ใน Production)
+    if (!empty($demoRole)) {
+        if ($isProduction) {
+            $errorMsg = 'ไม่อนุญาตให้ใช้งาน Demo Login ในโหมด Production (ความปลอดภัยระบบ)';
+        } else {
+            if ($demoRole === 'admin') {
+                $_SESSION['user'] = ['id' => 1, 'full_name' => 'คุณสมชาย บริหารดี (Admin)', 'email' => 'admin@wiang.go.th', 'role_name' => 'Admin', 'role_id' => 1, 'status' => 'active'];
+                header("Location: dashboard.php");
+                exit;
+            } elseif ($demoRole === 'approver') {
+                $_SESSION['user'] = ['id' => 2, 'full_name' => 'คุณสมศรี อนุมัติการ (Approver)', 'email' => 'approver@wiang.go.th', 'role_name' => 'Approver', 'role_id' => 2, 'status' => 'active'];
+                header("Location: dashboard.php");
+                exit;
+            } elseif ($demoRole === 'user') {
+                $_SESSION['user'] = ['id' => 3, 'full_name' => 'คุณใจดี พนักงานทั่วไป (User - Active)', 'email' => 'user@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'active'];
+                header("Location: dashboard.php");
+                exit;
+            } elseif ($demoRole === 'executive') {
+                $_SESSION['user'] = ['id' => 4, 'full_name' => 'ท่านนายก ประเสริฐศักดิ์ (Executive)', 'email' => 'executive@wiang.go.th', 'role_name' => 'Executive', 'role_id' => 4, 'status' => 'active'];
+                header("Location: dashboard.php");
+                exit;
+            } elseif ($demoRole === 'user_inactive') {
+                $_SESSION['user'] = ['id' => 5, 'full_name' => 'คุณรอคอย สมาชิกใหม่ (User - รออนุมัติ)', 'email' => 'waiting@wiang.go.th', 'role_name' => 'User', 'role_id' => 3, 'status' => 'inactive'];
                 header("Location: dashboard.php");
                 exit;
             }
-            break;
         }
     }
 
-    if (!$found && empty($errorMsg)) {
-        $errorMsg = 'ไม่พบข้อมูลบัญชีอีเมลนี้ในระบบ กรุณาตรวจสอบอีกครั้ง';
+    // กรณีล็อกอินด้วยอีเมลและรหัสผ่านจริง
+    if (!empty($email)) {
+        $users = Booking::getAllUsers();
+        $found = false;
+        foreach ($users as $u) {
+            if ($u['email'] === $email) {
+                $found = true;
+                if ($u['status'] === 'inactive') {
+                    $errorMsg = 'บัญชีของคุณอยู่ระหว่าง "รอการอนุมัติจาก Approver" (ยังไม่เปิดใช้งาน)';
+                } elseif ($u['status'] === 'suspended') {
+                    $errorMsg = 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ';
+                } else {
+                    $_SESSION['user'] = [
+                        'id' => $u['id'], 
+                        'full_name' => $u['full_name'], 
+                        'email' => $u['email'], 
+                        'role_name' => $u['role_name'] ?? 'User',
+                        'role_id' => $u['role_id'] ?? 3,
+                        'status' => $u['status'] ?? 'active'
+                    ];
+                    header("Location: dashboard.php");
+                    exit;
+                }
+                break;
+            }
+        }
+
+        if (!$found && empty($errorMsg)) {
+            $errorMsg = 'ไม่พบข้อมูลบัญชีอีเมลนี้ในระบบ กรุณาตรวจสอบอีกครั้ง';
+        }
     }
 }
 ?>
@@ -188,51 +191,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </form>
 
-                        <div class="position-relative my-4 text-center">
-                            <hr class="text-muted opacity-25">
-                            <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted fs-7 fw-semibold">หรือเลือกเข้าสู่ระบบด่วน (Demo Login)</span>
-                        </div>
+                        <?php if (!$isProduction): ?>
+                            <div class="position-relative my-4 text-center">
+                                <hr class="text-muted opacity-25">
+                                <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted fs-7 fw-semibold">หรือเลือกเข้าสู่ระบบด่วน (Demo Login)</span>
+                            </div>
 
-                        <!-- Demo Login Buttons -->
-                        <form action="login.php" method="POST">
-                            <input type="hidden" name="demo_role" value="admin">
-                            <button type="submit" class="demo-btn">
-                                <span class="d-flex align-items-center"><i class="fa-solid fa-user-shield me-3 text-indigo fs-5"></i> คุณสมชาย (ผู้ดูแลระบบ - Admin)</span>
-                                <i class="fa-solid fa-arrow-right text-muted"></i>
-                            </button>
-                        </form>
+                            <!-- Demo Login Buttons -->
+                            <form action="login.php" method="POST">
+                                <input type="hidden" name="demo_role" value="admin">
+                                <button type="submit" class="demo-btn">
+                                    <span class="d-flex align-items-center"><i class="fa-solid fa-user-shield me-3 text-indigo fs-5"></i> คุณสมชาย (ผู้ดูแลระบบ - Admin)</span>
+                                    <i class="fa-solid fa-arrow-right text-muted"></i>
+                                </button>
+                            </form>
 
-                        <form action="login.php" method="POST">
-                            <input type="hidden" name="demo_role" value="approver">
-                            <button type="submit" class="demo-btn">
-                                <span class="d-flex align-items-center"><i class="fa-solid fa-user-check me-3 text-success fs-5"></i> คุณสมศรี (ผู้อนุมัติ - Approver)</span>
-                                <i class="fa-solid fa-arrow-right text-muted"></i>
-                            </button>
-                        </form>
+                            <form action="login.php" method="POST">
+                                <input type="hidden" name="demo_role" value="approver">
+                                <button type="submit" class="demo-btn">
+                                    <span class="d-flex align-items-center"><i class="fa-solid fa-user-check me-3 text-success fs-5"></i> คุณสมศรี (ผู้อนุมัติ - Approver)</span>
+                                    <i class="fa-solid fa-arrow-right text-muted"></i>
+                                </button>
+                            </form>
 
-                        <form action="login.php" method="POST">
-                            <input type="hidden" name="demo_role" value="user">
-                            <button type="submit" class="demo-btn">
-                                <span class="d-flex align-items-center"><i class="fa-solid fa-user me-3 text-warning fs-5"></i> คุณใจดี (พนักงาน/สมาชิกทั่วไป - Active)</span>
-                                <i class="fa-solid fa-arrow-right text-muted"></i>
-                            </button>
-                        </form>
+                            <form action="login.php" method="POST">
+                                <input type="hidden" name="demo_role" value="user">
+                                <button type="submit" class="demo-btn">
+                                    <span class="d-flex align-items-center"><i class="fa-solid fa-user me-3 text-warning fs-5"></i> คุณใจดี (พนักงาน/สมาชิกทั่วไป - Active)</span>
+                                    <i class="fa-solid fa-arrow-right text-muted"></i>
+                                </button>
+                            </form>
 
-                        <form action="login.php" method="POST">
-                            <input type="hidden" name="demo_role" value="executive">
-                            <button type="submit" class="demo-btn" style="border-left: 4px solid #0dcaf0;">
-                                <span class="d-flex align-items-center"><i class="fa-solid fa-user-tie me-3 text-info fs-5"></i> ท่านนายก ประเสริฐศักดิ์ (ผู้บริหาร - Executive)</span>
-                                <i class="fa-solid fa-arrow-right text-muted"></i>
-                            </button>
-                        </form>
+                            <form action="login.php" method="POST">
+                                <input type="hidden" name="demo_role" value="executive">
+                                <button type="submit" class="demo-btn" style="border-left: 4px solid #0dcaf0;">
+                                    <span class="d-flex align-items-center"><i class="fa-solid fa-user-tie me-3 text-info fs-5"></i> ท่านนายก ประเสริฐศักดิ์ (ผู้บริหาร - Executive)</span>
+                                    <i class="fa-solid fa-arrow-right text-muted"></i>
+                                </button>
+                            </form>
 
-                        <form action="login.php" method="POST">
-                            <input type="hidden" name="demo_role" value="user_inactive">
-                            <button type="submit" class="demo-btn" style="border-left: 4px solid #f59e0b;">
-                                <span class="d-flex align-items-center"><i class="fa-solid fa-user-lock me-3 text-secondary fs-5"></i> คุณรอคอย (สมาชิกใหม่ - รออนุมัติ / Inactive)</span>
-                                <i class="fa-solid fa-arrow-right text-muted"></i>
-                            </button>
-                        </form>
+                            <form action="login.php" method="POST">
+                                <input type="hidden" name="demo_role" value="user_inactive">
+                                <button type="submit" class="demo-btn" style="border-left: 4px solid #f59e0b;">
+                                    <span class="d-flex align-items-center"><i class="fa-solid fa-user-lock me-3 text-secondary fs-5"></i> คุณรอคอย (สมาชิกใหม่ - รออนุมัติ / Inactive)</span>
+                                    <i class="fa-solid fa-arrow-right text-muted"></i>
+                                </button>
+                            </form>
+                        <?php endif; ?>
 
                         <div class="col-12 text-center mt-4">
                             <span class="text-muted fs-7">ยังไม่มีบัญชีผู้ใช้งาน? <a href="register.php" class="fw-bold text-indigo text-decoration-none">สมัครสมาชิกที่นี่</a></span>

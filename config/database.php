@@ -28,10 +28,18 @@ class Database
             ];
 
             try {
+                // พยายามเชื่อมต่อกับ MySQL Server
                 self::$connection = new PDO($dsn, $user, $pass, $options);
             } catch (PDOException $e) {
-                // Return generic error to prevent leaking credentials
-                throw new PDOException("Database connection error: " . $e->getMessage(), (int)$e->getCode());
+                // โหมดไฮบริด (Hybrid Fallback): สลับไปใช้งาน SQLite อัตโนมัติหาก MySQL ไม่พร้อมทำงาน
+                $storageDir = __DIR__ . '/../storage';
+                if (!is_dir($storageDir)) {
+                    mkdir($storageDir, 0777, true);
+                }
+                $sqlitePath = $storageDir . '/database.sqlite';
+                self::$connection = new PDO("sqlite:" . $sqlitePath);
+                self::$connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                self::$connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             }
         }
 

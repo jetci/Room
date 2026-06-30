@@ -1,14 +1,11 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
 use App\Models\Booking;
+use App\Middleware\AuthMiddleware;
 
-$currentUser = $_SESSION['user'] ?? [
-    'full_name' => 'คุณสมชาย บริหารดี',
-    'role_name' => 'Admin',
-    'email' => 'admin@wiang.go.th',
-    'status' => 'active'
-];
-$role = $currentUser['role_name'] ?? $currentUser['role'] ?? 'Admin';
+$currentUser = AuthMiddleware::requireRole(['Admin', 'Executive']);
+$role = $currentUser['role_name'] ?? 'Admin';
 $userStatus = $currentUser['status'] ?? 'active';
 $avatarName = urlencode($currentUser['full_name'] ?? 'Admin');
 

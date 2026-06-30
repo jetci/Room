@@ -1,0 +1,101 @@
+/* 
+ * Smart Facility & Sports Booking - Global Design System (index.css)
+ * Rich Aesthetics, Modern Premium Look, Harmonious Colors, Micro-animations
+ */
+
+:root {
+    --primary: #4338ca;
+    --primary-hover: #3730a3;
+    --primary-light: #e0e7ff;
+    --success: #10b981;
+    --success-hover: #059669;
+    --success-light: #d1fae5;
+    --danger: #ef4444;
+    --danger-light: #fee2e2;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --border-color: #e2e8f0;
+}
+
+body {
+    font-family: 'Sarabun', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Typography Helpers */
+.text-indigo { color: var(--primary) !important; }
+.text-custom-primary { color: var(--primary) !important; }
+.bg-indigo-light { background-color: var(--primary-light) !important; }
+.bg-yellow-light { background-color: var(--warning-light) !important; }
+.fs-7 { font-size: 0.875rem !important; }
+.fs-8 { font-size: 0.75rem !important; }
+
+/* Custom Buttons */
+.btn-custom-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-custom-primary:hover {
+    background-color: var(--primary-hover);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(67, 56, 202, 0.3);
+}
+
+/* Cards & Containers */
+.main-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.main-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background-color: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+}
+
+.nav-link {
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 14px 24px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.nav-link.active {
+    border-left: 5px solid var(--primary);
+}
+
+/* Interactive & Micro-animations */
+.hover-scale {
+    transition: transform 0.2s ease-in-out;
+}
+.hover-scale:hover {
+    transform: scale(1.03);
+}

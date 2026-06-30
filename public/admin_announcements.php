@@ -1,22 +1,12 @@
 <?php
 require_once __DIR__ . '/../routes/web.php';
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
 use App\Models\Booking;
+use App\Middleware\AuthMiddleware;
 
-$currentUser = $_SESSION['user'] ?? [
-    'full_name' => 'คุณสมชาย บริหารดี',
-    'role_name' => 'Admin',
-    'email' => 'admin@wiang.go.th',
-    'status' => 'active'
-];
-$role = $currentUser['role_name'] ?? 'User';
+$currentUser = AuthMiddleware::requireAdmin();
+$role = $currentUser['role_name'] ?? 'Admin';
 $userStatus = $currentUser['status'] ?? 'active';
-
-// ตรวจสอบสิทธิ์การเข้าถึง (ต้องเป็น Admin เท่านั้น)
-if ($role !== 'Admin') {
-    $_SESSION['error_message'] = "ปฏิเสธการเข้าถึง: เมนูนี้สงวนสิทธิ์เฉพาะผู้ดูแลระบบส่วนกลาง (Admin) เท่านั้น";
-    header("Location: login.php");
-    exit;
-}
 
 // จัดการการบันทึกฟอร์มประกาศส่วนกลาง
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
